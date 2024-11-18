@@ -1,0 +1,7 @@
+{
+    "name": "company_db",
+    "tuples_limit": 5,
+    "structure": {
+        "employees": ["id", "name", "position"]
+    }
+}
