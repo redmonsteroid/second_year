@@ -106,25 +106,25 @@ int main() {
     cout << "Multi-threaded processing time: " << multiThreadTime.count() << " seconds\n";
 
     // Вывод результатов
-    cout << "\nResults (Single-threaded):\n";
-    for (const auto& [product, quantity] : singleThreadQuantity) {
-        cout << "Product: " << product << ", Total Sold: " << quantity << "\n";
-        cout << "Receipts: ";
-        for (int receipt : singleThreadReceipts[product]) {
-            cout << receipt << " ";
-        }
-        cout << "\n";
-    }
+    // cout << "\nResults (Single-threaded):\n";
+    // for (const auto& [product, quantity] : singleThreadQuantity) {
+    //     cout << "Product: " << product << ", Total Sold: " << quantity << "\n";
+    //     cout << "Receipts: ";
+    //     for (int receipt : singleThreadReceipts[product]) {
+    //         cout << receipt << " ";
+    //     }
+    //     cout << "\n";
+    // }
 
-    cout << "\nResults (Multi-threaded):\n";
-    for (const auto& [product, quantity] : multiThreadQuantity) {
-        cout << "Product: " << product << ", Total Sold: " << quantity << "\n";
-        cout << "Receipts: ";
-        for (int receipt : multiThreadReceipts[product]) {
-            cout << receipt << " ";
-        }
-        cout << "\n";
-    }
+    // cout << "\nResults (Multi-threaded):\n";
+    // for (const auto& [product, quantity] : multiThreadQuantity) {
+    //     cout << "Product: " << product << ", Total Sold: " << quantity << "\n";
+    //     cout << "Receipts: ";
+    //     for (int receipt : multiThreadReceipts[product]) {
+    //         cout << receipt << " ";
+    //     }
+    //     cout << "\n";
+    // }
 
     return 0;
 }

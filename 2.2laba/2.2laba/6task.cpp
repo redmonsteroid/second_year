@@ -86,8 +86,8 @@ bool areIsomorphic(const string& str1, const string& str2) {
 }
 
 int main() {
-    string str1 = "fall";
-    string str2 = "redd";
+    string str1 = "dad";
+    string str2 = "ada";
 
     if (areIsomorphic(str1, str2)) {
         cout << "isomorphic" << endl;

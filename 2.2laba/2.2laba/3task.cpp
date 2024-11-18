@@ -1,76 +1,109 @@
-#include <iostream> //2
+#include <iostream>
+#include <string>
+#include <fstream>
 #include <cmath>
 
 using namespace std;
 
+const int TABLE_SIZE = 11;
 
-struct Node {
-    int data;
-    Node* next;
-    Node(int value) : data(value), next(nullptr) {}
+struct SetNode {
+    int value;
+    SetNode* next;
+    SetNode(int val) : value(val), next(nullptr) {}
 };
 
-struct LinkedList {
-    Node* head;
-    LinkedList() : head(nullptr) {}
+class CustomSet {
+private:
+    SetNode* table[TABLE_SIZE];
+
+    int hashFunction(int value) const {
+        return abs(value) % TABLE_SIZE;
+    }
+
+public:
+    CustomSet() {
+        for (int i = 0; i < TABLE_SIZE; ++i) {
+            table[i] = nullptr;
+        }
+    }
+
+    ~CustomSet() {
+        clear();
+    }
 
     void add(int value) {
-        Node* newNode = new Node(value);
-        newNode->next = head;
-        head = newNode;
+        if (contains(value)) return;
+        int index = hashFunction(value);
+        SetNode* newNode = new SetNode(value);
+        newNode->next = table[index];
+        table[index] = newNode;
+    }
+
+    bool contains(int value) const {
+        int index = hashFunction(value);
+        SetNode* node = table[index];
+        while (node) {
+            if (node->value == value) return true;
+            node = node->next;
+        }
+        return false;
+    }
+
+    void remove(int value) {
+        int index = hashFunction(value);
+        SetNode* node = table[index];
+        SetNode* prev = nullptr;
+        while (node) {
+            if (node->value == value) {
+                if (prev) prev->next = node->next;
+                else table[index] = node->next;
+                delete node;
+                return;
+            }
+            prev = node;
+            node = node->next;
+        }
     }
 
     int sum() const {
         int total = 0;
-        Node* current = head;
-        while (current) {
-            total += current->data;
-            current = current->next;
+        for (int i = 0; i < TABLE_SIZE; ++i) {
+            SetNode* node = table[i];
+            while (node) {
+                total += node->value;
+                node = node->next;
+            }
         }
         return total;
     }
 
-    void print() const {
-        Node* current = head;
-        while (current) {
-            cout << current->data << " ";
-            current = current->next;
-        }
-    }
-
     void clear() {
-        while (head) {
-            Node* temp = head;
-            head = head->next;
-            delete temp;
+        for (int i = 0; i < TABLE_SIZE; ++i) {
+            SetNode* node = table[i];
+            while (node) {
+                SetNode* temp = node;
+                node = node->next;
+                delete temp;
+            }
+            table[i] = nullptr;
         }
     }
 
-    int get(int index) const {
-        Node* current = head;
-        int i = 0;
-        while (current) {
-            if (i == index) return current->data;
-            current = current->next;
-            i++;
+    void print() const {
+        for (int i = 0; i < TABLE_SIZE; ++i) {
+            SetNode* node = table[i];
+            while (node) {
+                cout << node->value << " ";
+                node = node->next;
+            }
         }
-        return 0; 
-    }
-
-    int size() const {
-        int count = 0;
-        Node* current = head;
-        while (current) {
-            count++;
-            current = current->next;
-        }
-        return count;
     }
 };
 
-// Рекурсивная функция для нахождения подмножеств с минимальной разницей
-void findMinDiff(LinkedList& list, int index, LinkedList& subset1, LinkedList& subset2, LinkedList& bestSubset1, LinkedList& bestSubset2, int& minDiff) {
-    if (index == list.size()) {
+// Recursive function for finding partitions with minimal difference
+void findMinDiff(CustomSet& set, int index, CustomSet& subset1, CustomSet& subset2, CustomSet& bestSubset1, CustomSet& bestSubset2, int& minDiff, int size, int* elements) {
+    if (index == size) {
         int sum1 = subset1.sum();
         int sum2 = subset2.sum();
         int currentDiff = abs(sum1 - sum2);
@@ -79,38 +112,28 @@ void findMinDiff(LinkedList& list, int index, LinkedList& subset1, LinkedList& s
             minDiff = currentDiff;
             bestSubset1.clear();
             bestSubset2.clear();
-
-            Node* node = subset1.head;
-            while (node) {
-                bestSubset1.add(node->data);
-                node = node->next;
-            }
-
-            node = subset2.head;
-            while (node) {
-                bestSubset2.add(node->data);
-                node = node->next;
+            for (int i = 0; i < size; ++i) {
+                if (subset1.contains(elements[i])) bestSubset1.add(elements[i]);
+                if (subset2.contains(elements[i])) bestSubset2.add(elements[i]);
             }
         }
         return;
     }
 
-    int currentData = list.get(index);
+    subset1.add(elements[index]);
+    findMinDiff(set, index + 1, subset1, subset2, bestSubset1, bestSubset2, minDiff, size, elements);
+    subset1.remove(elements[index]);
 
-    subset1.add(currentData);
-    findMinDiff(list, index + 1, subset1, subset2, bestSubset1, bestSubset2, minDiff);
-    subset1.head = subset1.head->next;
-
-    subset2.add(currentData);
-    findMinDiff(list, index + 1, subset1, subset2, bestSubset1, bestSubset2, minDiff);
-    subset2.head = subset2.head->next;
+    subset2.add(elements[index]);
+    findMinDiff(set, index + 1, subset1, subset2, bestSubset1, bestSubset2, minDiff, size, elements);
+    subset2.remove(elements[index]);
 }
 
-void partitionSet(LinkedList& list) {
-    LinkedList subset1, subset2, bestSubset1, bestSubset2;
-    int minDiff = 123564698;
+void partitionSet(CustomSet& set, int size, int* elements) {
+    CustomSet subset1, subset2, bestSubset1, bestSubset2;
+    int minDiff = 1234567890;
 
-    findMinDiff(list, 0, subset1, subset2, bestSubset1, bestSubset2, minDiff);
+    findMinDiff(set, 0, subset1, subset2, bestSubset1, bestSubset2, minDiff, size, elements);
 
     cout << "First subset: ";
     bestSubset1.print();
@@ -118,18 +141,19 @@ void partitionSet(LinkedList& list) {
     cout << "Second subset: ";
     bestSubset2.print();
     cout << endl;
-    cout << "Difference " << minDiff << "\n";
+    cout << "Difference: " << minDiff << endl;
 }
 
 int main() {
-    LinkedList list;
-    list.add(5);
-    list.add(8);
-    list.add(1);
-    list.add(14);
-    list.add(7);
+    CustomSet mySet;
+    int elements[] = {5, 8, 1, 14, 7};
+    int size = sizeof(elements) / sizeof(elements[0]);
 
-    partitionSet(list);
+    for (int i = 0; i < size; i++) {
+        mySet.add(elements[i]);
+    }
+
+    partitionSet(mySet, size, elements);
 
     return 0;
 }
