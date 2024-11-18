@@ -1,7 +1,8 @@
 {
-    "name": "company_db",
-    "tuples_limit": 5,
+    "name": "Схема 1",
+    "tuples_limit": 10,
     "structure": {
-        "employees": ["id", "name", "position"]
+      "users": ["id", "name", "age", "email"] 
+      
     }
-}
+  }
