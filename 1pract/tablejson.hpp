@@ -6,6 +6,7 @@
 #include <fstream>
 #include "json.hpp"
 
+// Структура для представления колонки
 class Column {
 public:
     std::string column;
@@ -14,6 +15,7 @@ public:
     Column(const std::string& column, Column* next = nullptr) : column(column), next(next) {}
 };
 
+// Структура для представления таблицы
 class Table {
 public:
     std::string table;
@@ -23,7 +25,7 @@ public:
     Table(const std::string& table, Column* column = nullptr, Table* next = nullptr) 
         : table(table), column(column), next(next) {}
 
-    // Удаляем все связанные объекты Column и Table
+    // Деструктор для удаления связанных объектов Column и Table
     ~Table() {
         while (column) {
             Column* tmp = column;
@@ -33,6 +35,7 @@ public:
     }
 };
 
+// Класс для управления схемой и таблицами
 class TableJson {
 public:
     int tableSize;
@@ -49,7 +52,7 @@ public:
         }
     }
 
-    // Добавление таблицы и колонок в список
+    // Метод для добавления таблицы и колонок
     void addTable(const std::string& tableName, const std::string columns[], int columnCount) {
         Column* columnHead = nullptr;
         for (int i = columnCount - 1; i >= 0; --i) {
@@ -58,7 +61,7 @@ public:
         tablehead = new Table(tableName, columnHead, tablehead);
     }
 
-    // Проверка существования таблицы
+    // Метод для проверки существования таблицы
     bool isTableExist(const std::string& name) const {
         Table* current = tablehead;
         while (current) {
@@ -69,7 +72,7 @@ public:
     }
 };
 
-// Функции для работы с таблицами
+// Прототипы функций
 void removeDirectory(const std::filesystem::path& directoryPath);
 void createDirectoriesAndFiles(const std::filesystem::path& schemePath, const nlohmann::json& structure, TableJson& tableJS);
 void parsing(TableJson& tableJS);
