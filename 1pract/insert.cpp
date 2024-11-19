@@ -6,36 +6,6 @@
 
 namespace fs = std::filesystem;
 
-bool is_locked(const std::string& tableName, const std::string& schemaName) {
-    std::string lockFile = fs::current_path().string() + "/" + schemaName + "/" + tableName + "/" + tableName + "_lock.txt";
-    std::ifstream file(lockFile);
-    if (!file.is_open()) {
-        std::cerr << "Failed to open lock file: " << lockFile << std::endl;
-        return false;
-    }
-    std::string status;
-    file >> status;
-    return (status == "locked");
-}
-
-void toggle_lock(const std::string& tableName, const std::string& schemaName) {
-    std::string lockFile = fs::current_path().string() + "/" + schemaName + "/" + tableName + "/" + tableName + "_lock.txt";
-    std::ifstream fileIn(lockFile);
-    if (!fileIn.is_open()) {
-        std::cerr << "Failed to open lock file for reading: " << lockFile << std::endl;
-        return;
-    }
-    std::string currentStatus;
-    fileIn >> currentStatus;
-    fileIn.close();
-
-    std::ofstream fileOut(lockFile);
-    if (!fileOut.is_open()) {
-        std::cerr << "Failed to open lock file for writing: " << lockFile << std::endl;
-        return;
-    }
-    fileOut << (currentStatus == "locked" ? "unlocked" : "locked");
-}
 
 void insert(const std::string& command, TableJson& tableJS) {
     std::string baseDir = fs::current_path().string() + "/" + tableJS.schemeName + "/";

@@ -111,3 +111,45 @@ void parsing(TableJson& tableJS) {
         createDirectoriesAndFiles(schemePath, schemaData["structure"], tableJS);
     }
 }
+bool is_locked(const std::string& tableName, const std::string& schemaName) {
+    std::string lockFile = std::filesystem::current_path().string() + "/" + schemaName + "/" + tableName + "/" + tableName + "_lock.txt";
+    std::ifstream file(lockFile);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open lock file: " << lockFile << std::endl;
+        return false;
+    }
+    std::string status;
+    file >> status;
+    return (status == "locked");
+}
+
+void toggle_lock(const std::string& tableName, const std::string& schemaName) {
+    std::string lockFile = std::filesystem::current_path().string() + "/" + schemaName + "/" + tableName + "/" + tableName + "_lock.txt";
+    std::ifstream fileIn(lockFile);
+    if (!fileIn.is_open()) {
+        std::cerr << "Failed to open lock file for reading: " << lockFile << std::endl;
+        return;
+    }
+    std::string currentStatus;
+    fileIn >> currentStatus;
+    fileIn.close();
+
+    std::ofstream fileOut(lockFile);
+    if (!fileOut.is_open()) {
+        std::cerr << "Failed to open lock file for writing: " << lockFile << std::endl;
+        return;
+    }
+    fileOut << (currentStatus == "locked" ? "unlocked" : "locked");
+}
+int amountOfCSV(const TableJson& tableJS, const std::string& tableName) {
+    int count = 0;
+    std::string directoryPath = tableJS.schemeName + "/" + tableName;
+
+    // Перебираем все файлы в директории таблицы
+    for (const auto& entry : std::filesystem::directory_iterator(directoryPath)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".csv") {
+            count++;
+        }
+    }
+    return count;
+}

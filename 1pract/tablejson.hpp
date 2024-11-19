@@ -76,3 +76,6 @@ public:
 void removeDirectory(const std::filesystem::path& directoryPath);
 void createDirectoriesAndFiles(const std::filesystem::path& schemePath, const nlohmann::json& structure, TableJson& tableJS);
 void parsing(TableJson& tableJS);
+void toggle_lock(const std::string& tableName, const std::string& schemaName);
+bool is_locked(const std::string& tableName, const std::string& schemaName);
+int amountOfCSV(const TableJson& tableJS, const std::string& tableName);
