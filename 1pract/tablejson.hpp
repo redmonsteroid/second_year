@@ -70,6 +70,26 @@ public:
         }
         return false;
     }
+     // Метод для получения индекса колонки по имени
+    int getColumnIndex(const std::string& tableName, const std::string& columnName) const {
+        Table* currentTable = tablehead;
+        while (currentTable) {
+            if (currentTable->table == tableName) {
+                Column* currentColumn = currentTable->column;
+                int index = 0;
+                while (currentColumn) {
+                    if (currentColumn->column == columnName) {
+                        return index; // Возвращаем индекс колонки
+                    }
+                    currentColumn = currentColumn->next;
+                    index++;
+                }
+                break; // Если таблица найдена, но колонка не найдена
+            }
+            currentTable = currentTable->next;
+        }
+        return -1; // Если таблица или колонка не найдены
+    }
 };
 
 // Прототипы функций
