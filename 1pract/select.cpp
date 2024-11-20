@@ -39,64 +39,128 @@ DynamicArray readCSVData(const std::string& filePath) {
 
     DynamicArray rows;
     while (std::getline(file, line)) {
+        if (line.empty()) {
+            std::cerr << "[WARNING] Skipping empty line in file: " << filePath << "\n";
+            continue;
+        }
+
         rows.add(line);
+        std::cout << "[DEBUG] Added row: " << line << " to data\n";
+    }
+
+    if (rows.getSize() == 0) {
+        std::cerr << "[WARNING] No data found in file: " << filePath << "\n";
     }
 
     return rows;
 }
 
-void crossJoin(DynamicArray& table1Data, DynamicArray& table2Data, DynamicArray& table1Header, DynamicArray& table2Header) {
-    std::cout << "[DEBUG] Table 1 size: " << table1Data.getSize() << "\n";  // Отладка
-    std::cout << "[DEBUG] Table 2 size: " << table2Data.getSize() << "\n";  // Отладка
 
-    if (table1Data.getSize() == 0 || table2Data.getSize() == 0) {
-        std::cerr << "[DEBUG] One or both tables are empty. Cross join aborted.\n";
-        return;
-    }
 
-    std::ofstream outFile("cross_join_result.csv");
-    outFile << table1Header.get(0) << "," << table2Header.get(0) << "\n";
-    std::cout << "[DEBUG] Headers: " << table1Header.get(0) << "," << table2Header.get(0) << "\n";  // Отладка
-
-    for (int i = 0; i < table1Data.getSize(); ++i) {
-        for (int j = 0; j < table2Data.getSize(); ++j) {
-            outFile << table1Data.get(i) << "," << table2Data.get(j) << "\n";
-            std::cout << "[DEBUG] Cross Join Row: " << table1Data.get(i) << "," << table2Data.get(j) << "\n";  // Отладка
+void crossJoin(DynamicArray& table1Data, DynamicArray& table2Data, DynamicArray& table1Header, DynamicArray& table2Header, const DynamicArray& selectedColumns) {
+    try {
+        std::ofstream outFile("cross_join_result.csv");
+        if (!outFile.is_open()) {
+            throw std::runtime_error("Failed to open output file: cross_join_result.csv");
         }
-    }
 
-    outFile.close();
-    std::cout << "[DEBUG] Cross join result has been written to cross_join_result.csv\n";
+        // Определяем индексы выбранных колонок
+        int table1ColIndex = -1;
+        int table2ColIndex = -1;
+
+        for (int i = 0; i < selectedColumns.getSize(); ++i) {
+            std::string col = selectedColumns.get(i);
+            size_t dotPos = col.find('.');
+            if (dotPos != std::string::npos) {
+                std::string tableName = col.substr(0, dotPos);
+                std::string columnName = col.substr(dotPos + 1);
+
+                if (tableName == "таблица1") {
+                    for (int j = 0; j < table1Header.getSize(); ++j) {
+                        if (table1Header.get(j) == columnName) {
+                            table1ColIndex = j;
+                            break;
+                        }
+                    }
+                } else if (tableName == "таблица2") {
+                    for (int j = 0; j < table2Header.getSize(); ++j) {
+                        if (table2Header.get(j) == columnName) {
+                            table2ColIndex = j;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (table1ColIndex == -1 || table2ColIndex == -1) {
+            throw std::runtime_error("Selected columns not found in tables.");
+        }
+
+        // Записываем заголовок
+        outFile << selectedColumns.get(0) << "," << selectedColumns.get(1) << "\n";
+
+        // Cross Join и вывод
+        for (int i = 0; i < table1Data.getSize(); ++i) {
+            std::string row1 = table1Data.get(i);
+            std::istringstream rowStream1(row1);
+            std::string cell1;
+            for (int col = 0; col <= table1ColIndex; ++col) {
+                std::getline(rowStream1, cell1, ',');
+            }
+
+            for (int j = 0; j < table2Data.getSize(); ++j) {
+                std::string row2 = table2Data.get(j);
+                std::istringstream rowStream2(row2);
+                std::string cell2;
+                for (int col = 0; col <= table2ColIndex; ++col) {
+                    std::getline(rowStream2, cell2, ',');
+                }
+
+                // Записываем в файл и консоль
+                outFile << cell1 << "," << cell2 << "\n";
+                std::cout << "[DEBUG] Cross Join Row: " << cell1 << "," << cell2 << "\n";
+            }
+        }
+
+        outFile.close();
+        std::cout << "[DEBUG] Cross join result has been written to cross_join_result.csv\n";
+    } catch (const std::exception& e) {
+        std::cerr << "[ERROR] Cross join failed: " << e.what() << "\n";
+    }
 }
+
+
+
 
 
 void selectFromTables(const std::string& command, TableJson& tableJS) {
     std::istringstream iss(command);
     std::string word, tableName;
-    DynamicArray selectedColumns;  // Массив для хранения имен колонок
-    DynamicArray tableNames;       // Массив для хранения имен таблиц
+    DynamicArray selectedColumns;  // Список колонок
+    DynamicArray tableNames;       // Список таблиц
 
     // Парсинг команды: игнорируем "SELECT"
     iss >> word;
 
-    // Чтение имен колонок до "FROM"
+    // Чтение колонок до "FROM"
     while (iss >> word && word != "FROM") {
-        if (word.back() == ',') word.pop_back();  // Удаляем запятую
+        if (word.back() == ',') word.pop_back();
         selectedColumns.add(word);
-        std::cout << "[DEBUG] Selected column: " << word << "\n"; // Отладочный вывод
+        std::cout << "[DEBUG] Selected column: " << word << "\n";
     }
 
-    // Чтение имен таблиц после "FROM"
+    // Чтение таблиц после "FROM"
     while (iss >> tableName) {
-        if (tableName.back() == ',') tableName.pop_back();  // Удаляем запятую
+        if (tableName.back() == ',') tableName.pop_back();
         tableNames.add(tableName);
-        std::cout << "[DEBUG] Table name: " << tableName << "\n"; // Отладочный вывод
+        std::cout << "[DEBUG] Table name: " << tableName << "\n";
     }
 
     // Проверка существования таблиц
     for (int i = 0; i < tableNames.getSize(); ++i) {
         if (!tableJS.isTableExist(tableNames.get(i))) {
-            std::cerr << "[DEBUG] Table does not exist: " << tableNames.get(i) << "\n";
+            std::cerr << "Table " << tableNames.get(i) << " does not exist.\n";
             return;
         }
     }
@@ -108,10 +172,10 @@ void selectFromTables(const std::string& command, TableJson& tableJS) {
     try {
         for (int i = 0; i < tableNames.getSize(); ++i) {
             std::string csvFilePath = tableJS.schemeName + "/" + tableNames.get(i) + "/1.csv";
-            std::cout << "[DEBUG] Reading table: " << tableNames.get(i) << " from " << csvFilePath << "\n"; // Отладка
+            std::cout << "[DEBUG] Reading table: " << tableNames.get(i) << " from " << csvFilePath << "\n";
 
-            tableHeaders[i] = readCSVHeader(csvFilePath);
-            tableData[i] = readCSVData(csvFilePath);
+            tableHeaders[i] = readCSVHeader(csvFilePath);  // Читаем заголовки
+            tableData[i] = readCSVData(csvFilePath);      // Читаем данные
         }
     } catch (const std::exception& e) {
         std::cerr << "Error reading tables: " << e.what() << "\n";
@@ -119,5 +183,6 @@ void selectFromTables(const std::string& command, TableJson& tableJS) {
     }
 
     // Выполняем Cross Join
-    crossJoin(tableData[0], tableData[1], tableHeaders[0], tableHeaders[1]);
+    crossJoin(tableData[0], tableData[1], tableHeaders[0], tableHeaders[1], selectedColumns);
+
 }
