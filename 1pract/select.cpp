@@ -48,11 +48,11 @@ bool checkCondition(const std::string& cellValue, const std::string& condition) 
 // Функция для удаления префикса таблицы и очистки от лишних пробелов
 
 
-void crossJoin(rapidcsv::Document& table1, rapidcsv::Document& table2, 
-               const DynamicArray& selectedColumns, 
-               const std::string& whereCol1, const std::string& whereCond1,
-               const std::string& whereCol2, const std::string& whereCond2, 
-               const std::string& logicalOp) {
+void crossJoinWithFilter(rapidcsv::Document& table1, rapidcsv::Document& table2, 
+                         const DynamicArray& selectedColumns, 
+                         const std::string& whereCol1, const std::string& whereCond1,
+                         const std::string& whereCol2, const std::string& whereCond2, 
+                         const std::string& logicalOp) {
     std::ofstream outFile("cross_join_result.csv");
     if (!outFile.is_open()) {
         throw std::runtime_error("Failed to open output file: cross_join_result.csv");
@@ -68,54 +68,54 @@ void crossJoin(rapidcsv::Document& table1, rapidcsv::Document& table2,
     std::string whereCol1Clean = removeTablePrefix(whereCol1);
     std::string whereCol2Clean = removeTablePrefix(whereCol2);
 
-    // Если условия WHERE нет, просто добавляем все строки из обеих таблиц
-    if (whereCol1.empty() && whereCol2.empty()) {
-        for (int i = 0; i < table1RowCount; ++i) {
-            std::string cell1 = table1.GetCell<std::string>(table1Col, i);
-            for (int j = 0; j < table2RowCount; ++j) {
-                std::string cell2 = table2.GetCell<std::string>(table2Col, j);
-                outFile << cell1 << "," << cell2 << "\n";
-                std::cout << "[DEBUG] Cross Join Row: " << cell1 << "," << cell2 << "\n";
-            }
-        }
-    } else {
-        // Если есть условия, фильтруем их
-        for (int i = 0; i < table1RowCount; ++i) {
-            std::string cell1 = table1.GetCell<std::string>(table1Col, i);
-            std::string whereCell1 = whereCol1.empty() ? "" : table1.GetCell<std::string>(whereCol1Clean, i);
+    // Сначала добавим все строки в результат
+    std::vector<std::pair<std::string, std::string>> resultRows;
+    for (int i = 0; i < table1RowCount; ++i) {
+        std::string cell1 = table1.GetCell<std::string>(table1Col, i);
+        std::string whereCell1 = whereCol1.empty() ? "" : table1.GetCell<std::string>(whereCol1Clean, i);
 
-            for (int j = 0; j < table2RowCount; ++j) {
-                std::string cell2 = table2.GetCell<std::string>(table2Col, j);
-                std::string whereCell2 = whereCol2.empty() ? "" : table2.GetCell<std::string>(whereCol2Clean, j);
+        for (int j = 0; j < table2RowCount; ++j) {
+            std::string cell2 = table2.GetCell<std::string>(table2Col, j);
+            std::string whereCell2 = whereCol2.empty() ? "" : table2.GetCell<std::string>(whereCol2Clean, j);
 
-                std::cout << "[DEBUG] Checking conditions for whereCell1: " << whereCell1 
-                          << ", whereCond1: " << whereCond1 
-                          << ", whereCell2: " << whereCell2 
-                          << ", whereCond2: " << whereCond2 << "\n";
-
-                bool condition1 = whereCol1.empty() || checkCondition(whereCell1, whereCond1);
-                bool condition2 = whereCol2.empty() || checkCondition(whereCell2, whereCond2);
-
-                bool finalCondition = false;
-                if (logicalOp == "AND") {
-                    finalCondition = condition1 && condition2;
-                } else if (logicalOp == "OR") {
-                    finalCondition = condition1 || condition2;
-                } else {
-                    finalCondition = condition1;
-                }
-
-                if (finalCondition) {
-                    outFile << cell1 << "," << cell2 << "\n";
-                    std::cout << "[DEBUG] Cross Join Row: " << cell1 << "," << cell2 << "\n";
-                }
-            }
+            // Добавляем текущую строку в общий результат
+            resultRows.emplace_back(cell1, cell2);
+            std::cout << "[DEBUG] Adding row to result: " << cell1 << "," << cell2 << "\n";
         }
     }
 
+    // Теперь фильтруем строки, которые не соответствуют условиям
+    for (auto it = resultRows.begin(); it != resultRows.end();) {
+        bool condition1 = whereCol1.empty() || checkCondition(it->second, whereCond1);  // Где в таблице 2
+        bool condition2 = whereCol2.empty() || checkCondition(it->first, whereCond2);  // Где в таблице 1
+
+        bool meetsConditions = false;
+        if (logicalOp == "AND") {
+            meetsConditions = condition1 && condition2;
+        } else if (logicalOp == "OR") {
+            meetsConditions = condition1 || condition2;
+        } else {
+            meetsConditions = condition1;
+        }
+
+        if (!meetsConditions) {
+            std::cout << "[DEBUG] Removing row from result: " << it->first << "," << it->second << "\n";
+            it = resultRows.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
+    // Записываем отфильтрованные строки в файл
+    for (const auto& row : resultRows) {
+        outFile << row.first << "," << row.second << "\n";
+        std::cout << "[DEBUG] Writing row to output: " << row.first << "," << row.second << "\n";
+    }
+
     outFile.close();
-    std::cout << "[DEBUG] Cross join result has been written to cross_join_result.csv\n";
+    std::cout << "[DEBUG] Filtered cross join result has been written to cross_join_result.csv\n";
 }
+
 
 
 void selectFromTables(const std::string& command, TableJson& tableJS) {
@@ -186,6 +186,6 @@ void selectFromTables(const std::string& command, TableJson& tableJS) {
 
 
     // Если условие WHERE существует, выполняем crossJoin с фильтрацией
-    crossJoin(table1, table2, selectedColumns, whereCol1, whereCond1, whereCol2, whereCond2, logicalOp);
+    crossJoinWithFilter(table1, table2, selectedColumns, whereCol1, whereCond1, whereCol2, whereCond2, logicalOp);
 }
 
