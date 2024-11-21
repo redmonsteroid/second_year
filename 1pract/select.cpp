@@ -93,7 +93,6 @@ void selectFromTables(const std::string& command, TableJson& tableJS) {
     DynamicArray selectedColumns;
     DynamicArray tableNames;
 
-    // Парсим SELECT запрос для получения столбцов и таблиц
     iss >> word;
     while (iss >> word && word != "FROM") {
         if (word.back() == ',') word.pop_back();
@@ -108,46 +107,42 @@ void selectFromTables(const std::string& command, TableJson& tableJS) {
         std::cout << "[DEBUG] Table name: " << tableName << "\n";
     }
 
-    // Загрузка данных для таблиц
+    // Загружаем данные для таблиц
     rapidcsv::Document table1(tableJS.schemeName + "/" + tableNames.get(0) + "/1.csv");
     rapidcsv::Document table2(tableJS.schemeName + "/" + tableNames.get(1) + "/1.csv");
 
-    // Если условия WHERE нет в запросе, просто выполняем crossJoin
+    // Ищем условие WHERE
     size_t wherePos = command.find("WHERE");
-    if (wherePos == std::string::npos) {
-        std::cout << "[DEBUG] No WHERE condition found, performing cross join without conditions.\n";
-        crossJoin(table1, table2, selectedColumns, "", "", "", "", "");
-        return;
-    }
-
-    // Если WHERE существует, обрабатываем условия
     std::string whereCol1, whereCond1, whereCol2, whereCond2, logicalOp;
-    std::string condition = command.substr(wherePos + 5);
-    size_t andPos = condition.find(" AND ");
-    size_t orPos = condition.find(" OR ");
-    
-    if (andPos != std::string::npos) {
-        logicalOp = "AND";
-        whereCol1 = condition.substr(0, andPos);
-        whereCol2 = condition.substr(andPos + 5);
-    } else if (orPos != std::string::npos) {
-        logicalOp = "OR";
-        whereCol1 = condition.substr(0, orPos);
-        whereCol2 = condition.substr(orPos + 4);
-    } else {
-        whereCol1 = condition;
-    }
 
-    whereCond1 = whereCol1.substr(whereCol1.find('=') + 1);
-    whereCol1 = whereCol1.substr(0, whereCol1.find('='));
-    whereCond1.erase(0, whereCond1.find_first_not_of(' '));
-    whereCond1.erase(whereCond1.find_last_not_of(' ') + 1);
+    if (wherePos != std::string::npos) {
+        std::string condition = command.substr(wherePos + 5); // Извлекаем строку после WHERE
+        size_t andPos = condition.find(" AND ");
+        size_t orPos = condition.find(" OR ");
 
-    if (!whereCol2.empty()) {
-        whereCond2 = whereCol2.substr(whereCol2.find('=') + 1);
-        whereCol2 = whereCol2.substr(0, whereCol2.find('='));
-        whereCond2.erase(0, whereCond2.find_first_not_of(' '));
-        whereCond2.erase(whereCond2.find_last_not_of(' ') + 1);
+        if (andPos != std::string::npos) {
+            logicalOp = "AND";
+            whereCol1 = condition.substr(0, andPos);
+            whereCol2 = condition.substr(andPos + 5);
+        } else if (orPos != std::string::npos) {
+            logicalOp = "OR";
+            whereCol1 = condition.substr(0, orPos);
+            whereCol2 = condition.substr(orPos + 4);
+        } else {
+            whereCol1 = condition;
+        }
+
+        whereCond1 = whereCol1.substr(whereCol1.find('=') + 1);
+        whereCol1 = whereCol1.substr(0, whereCol1.find('='));
+        whereCond1.erase(0, whereCond1.find_first_not_of(' '));
+        whereCond1.erase(whereCond1.find_last_not_of(' ') + 1);
+
+        if (!whereCol2.empty()) {
+            whereCond2 = whereCol2.substr(whereCol2.find('=') + 1);
+            whereCol2 = whereCol2.substr(0, whereCol2.find('='));
+            whereCond2.erase(0, whereCond2.find_first_not_of(' '));
+            whereCond2.erase(whereCond2.find_last_not_of(' ') + 1);
+        }
     }
 
     std::cout << "[DEBUG] whereCol1: " << whereCol1 << "\n";
@@ -156,6 +151,7 @@ void selectFromTables(const std::string& command, TableJson& tableJS) {
     std::cout << "[DEBUG] whereCond2: " << whereCond2 << "\n";
     std::cout << "[DEBUG] logicalOp: " << logicalOp << "\n";
 
-    // Выполнение Cross Join с условиями
+    // Если условие WHERE существует, выполняем crossJoin с фильтрацией
     crossJoin(table1, table2, selectedColumns, whereCol1, whereCond1, whereCol2, whereCond2, logicalOp);
 }
+
