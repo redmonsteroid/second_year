@@ -82,11 +82,13 @@ void crossJoinWithFilter(rapidcsv::Document& table1, rapidcsv::Document& table2,
     }
 
     // Записываем только отфильтрованные строки в файл
+    
     for (int k = 0; k < filteredRows.getSize(); ++k) {
-        const auto& row = filteredRows.get(k);
+        const StringPair& row = filteredRows.get(k);
         outFile << row.first << "," << row.second << "\n";
         std::cout << "[DEBUG] Writing row to output: " << row.first << "," << row.second << "\n";
-    }
+}
+
 
     outFile.close();
     std::cout << "[DEBUG] Filtered cross join result has been written to cross_join_result.csv\n";

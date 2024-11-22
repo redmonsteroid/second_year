@@ -88,20 +88,26 @@ public:
     }
 };
 
-#include <iostream>
-#include <stdexcept>
-#include <string>
+// Определение структуры для хранения пары строк
+struct StringPair {
+    std::string first;
+    std::string second;
+
+    StringPair(const std::string& firstValue = "", const std::string& secondValue = "")
+        : first(firstValue), second(secondValue) {}
+};
+
 
 class DynamicPairArray {
 private:
-    std::pair<std::string, std::string>* data;
+    StringPair* data;  // Массив для хранения пар
     int capacity;
     int size;
 
 public:
     // Конструктор
     DynamicPairArray(int initialCapacity = 10) : capacity(initialCapacity), size(0) {
-        data = new std::pair<std::string, std::string>[capacity];
+        data = new StringPair[capacity];
         std::cout << "[DEBUG] DynamicPairArray initialized with capacity: " << capacity << "\n";
     }
 
@@ -111,22 +117,22 @@ public:
         std::cout << "[DEBUG] DynamicPairArray destroyed\n";
     }
 
-    // Добавление пары значений
+    // Метод для добавления пары значений
     void add(const std::string& first, const std::string& second) {
         if (size == capacity) {
             capacity *= 2;
-            auto* newData = new std::pair<std::string, std::string>[capacity];
+            auto* newData = new StringPair[capacity];
             for (int i = 0; i < size; ++i) {
                 newData[i] = data[i];
             }
             delete[] data;
             data = newData;
         }
-        data[size++] = std::make_pair(first, second);
+        data[size++] = StringPair(first, second);
         std::cout << "[DEBUG] Added pair to array: (" << first << ", " << second << ")\n";
     }
 
-    // Удаление пары по индексу
+    // Метод для удаления пары по индексу
     void remove(int index) {
         if (index < 0 || index >= size) {
             throw std::out_of_range("Index out of range");
@@ -138,8 +144,8 @@ public:
         std::cout << "[DEBUG] Removed pair at index " << index << "\n";
     }
 
-    // Получение пары по индексу
-    const std::pair<std::string, std::string>& get(int index) const {
+    // Метод для получения пары по индексу
+    const StringPair& get(int index) const {
         if (index < 0 || index >= size) {
             throw std::out_of_range("Index out of range");
         }
@@ -151,6 +157,7 @@ public:
         return size;
     }
 };
+
 
 
 void splitDot(const std::string& word, std::string& table, std::string& column, TableJson& tableJS);
