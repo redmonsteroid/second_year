@@ -76,12 +76,81 @@ public:
         return data[index];
     }
 
+    void remove(int index) {
+        if (index < 0 || index >= size) {
+            throw std::out_of_range("Index out of range");
+        }
+    }
+
     // Размер массива
     int getSize() const {
         return size;
     }
 };
 
+#include <iostream>
+#include <stdexcept>
+#include <string>
+
+class DynamicPairArray {
+private:
+    std::pair<std::string, std::string>* data;
+    int capacity;
+    int size;
+
+public:
+    // Конструктор
+    DynamicPairArray(int initialCapacity = 10) : capacity(initialCapacity), size(0) {
+        data = new std::pair<std::string, std::string>[capacity];
+        std::cout << "[DEBUG] DynamicPairArray initialized with capacity: " << capacity << "\n";
+    }
+
+    // Деструктор
+    ~DynamicPairArray() {
+        delete[] data;
+        std::cout << "[DEBUG] DynamicPairArray destroyed\n";
+    }
+
+    // Добавление пары значений
+    void add(const std::string& first, const std::string& second) {
+        if (size == capacity) {
+            capacity *= 2;
+            auto* newData = new std::pair<std::string, std::string>[capacity];
+            for (int i = 0; i < size; ++i) {
+                newData[i] = data[i];
+            }
+            delete[] data;
+            data = newData;
+        }
+        data[size++] = std::make_pair(first, second);
+        std::cout << "[DEBUG] Added pair to array: (" << first << ", " << second << ")\n";
+    }
+
+    // Удаление пары по индексу
+    void remove(int index) {
+        if (index < 0 || index >= size) {
+            throw std::out_of_range("Index out of range");
+        }
+        for (int i = index; i < size - 1; ++i) {
+            data[i] = data[i + 1];
+        }
+        --size;
+        std::cout << "[DEBUG] Removed pair at index " << index << "\n";
+    }
+
+    // Получение пары по индексу
+    const std::pair<std::string, std::string>& get(int index) const {
+        if (index < 0 || index >= size) {
+            throw std::out_of_range("Index out of range");
+        }
+        return data[index];
+    }
+
+    // Получение текущего размера массива
+    int getSize() const {
+        return size;
+    }
+};
 
 
 void splitDot(const std::string& word, std::string& table, std::string& column, TableJson& tableJS);

@@ -3,49 +3,31 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <vector>
 #include "select.hpp"
 
-// Функция для удаления префикса таблицы и очистки от лишних пробелов
 // Функция для удаления префикса таблицы и очистки от лишних пробелов
 std::string removeTablePrefix(const std::string& columnName) {
     size_t dotPos = columnName.find('.');
     std::string cleanCol = (dotPos != std::string::npos) ? columnName.substr(dotPos + 1) : columnName;
-
-    // Убираем кавычки и пробелы вокруг имени колонки
     cleanCol.erase(0, cleanCol.find_first_not_of(" '\""));
     cleanCol.erase(cleanCol.find_last_not_of(" '\"") + 1);
-    
-    std::cout << "[DEBUG] Cleaned column name: " << cleanCol << "\n";  // Отладка
     return cleanCol;
 }
 
-
 // Функция для проверки условий WHERE
 bool checkCondition(const std::string& cellValue, const std::string& condition) {
-    // Очищаем condition от кавычек и пробелов
     std::string cleanedCondition = condition;
-    if (cleanedCondition.front() == '\'' && cleanedCondition.back() == '\'') {
-        cleanedCondition = cleanedCondition.substr(1, cleanedCondition.size() - 2);
-    }
     cleanedCondition.erase(0, cleanedCondition.find_first_not_of(" '\""));
     cleanedCondition.erase(cleanedCondition.find_last_not_of(" '\"") + 1);
 
-    // Очищаем cellValue от пробелов и кавычек
     std::string cleanedCellValue = cellValue;
     cleanedCellValue.erase(0, cleanedCellValue.find_first_not_of(" '\""));
     cleanedCellValue.erase(cleanedCellValue.find_last_not_of(" '\"") + 1);
 
-    std::cout << "[DEBUG] Comparing cellValue: '" << cleanedCellValue 
-              << "' with cleanedCondition: '" << cleanedCondition << "'\n";  // Отладка
-
-    return cleanedCellValue == cleanedCondition;  // Сравниваем после очистки
+    return cleanedCellValue == cleanedCondition;
 }
 
-
-
-
-// Функция для удаления префикса таблицы и очистки от лишних пробелов
+// Добавляем метод `remove` для удаления элемента из `DynamicArray`
 
 
 void crossJoinWithFilter(rapidcsv::Document& table1, rapidcsv::Document& table2, 
@@ -68,8 +50,8 @@ void crossJoinWithFilter(rapidcsv::Document& table1, rapidcsv::Document& table2,
     std::string whereCol1Clean = removeTablePrefix(whereCol1);
     std::string whereCol2Clean = removeTablePrefix(whereCol2);
 
-    // Сначала добавим все строки в результат
-    std::vector<std::pair<std::string, std::string>> resultRows;
+    DynamicPairArray filteredRows;  // Массив для хранения отфильтрованных строк
+
     for (int i = 0; i < table1RowCount; ++i) {
         std::string cell1 = table1.GetCell<std::string>(table1Col, i);
         std::string whereCell1 = whereCol1.empty() ? "" : table1.GetCell<std::string>(whereCol1Clean, i);
@@ -78,36 +60,30 @@ void crossJoinWithFilter(rapidcsv::Document& table1, rapidcsv::Document& table2,
             std::string cell2 = table2.GetCell<std::string>(table2Col, j);
             std::string whereCell2 = whereCol2.empty() ? "" : table2.GetCell<std::string>(whereCol2Clean, j);
 
-            // Добавляем текущую строку в общий результат
-            resultRows.emplace_back(cell1, cell2);
-            std::cout << "[DEBUG] Adding row to result: " << cell1 << "," << cell2 << "\n";
+            // Проверяем, удовлетворяют ли значения условиям
+            bool condition1 = whereCol1.empty() || checkCondition(whereCell1, whereCond1);
+            bool condition2 = whereCol2.empty() || checkCondition(whereCell2, whereCond2);
+
+            bool meetsConditions = false;
+            if (logicalOp == "AND") {
+                meetsConditions = condition1 && condition2;
+            } else if (logicalOp == "OR") {
+                meetsConditions = condition1 || condition2;
+            } else {
+                meetsConditions = condition1;
+            }
+
+            // Добавляем строку в результат, если она удовлетворяет условиям
+            if (meetsConditions) {
+                filteredRows.add(cell1, cell2);
+                std::cout << "[DEBUG] Adding row to filtered result: " << cell1 << "," << cell2 << "\n";
+            }
         }
     }
 
-    // Теперь фильтруем строки, которые не соответствуют условиям
-    for (auto it = resultRows.begin(); it != resultRows.end();) {
-        bool condition1 = whereCol1.empty() || checkCondition(it->second, whereCond1);  // Где в таблице 2
-        bool condition2 = whereCol2.empty() || checkCondition(it->first, whereCond2);  // Где в таблице 1
-
-        bool meetsConditions = false;
-        if (logicalOp == "AND") {
-            meetsConditions = condition1 && condition2;
-        } else if (logicalOp == "OR") {
-            meetsConditions = condition1 || condition2;
-        } else {
-            meetsConditions = condition1;
-        }
-
-        if (!meetsConditions) {
-            std::cout << "[DEBUG] Removing row from result: " << it->first << "," << it->second << "\n";
-            it = resultRows.erase(it);
-        } else {
-            ++it;
-        }
-    }
-
-    // Записываем отфильтрованные строки в файл
-    for (const auto& row : resultRows) {
+    // Записываем только отфильтрованные строки в файл
+    for (int k = 0; k < filteredRows.getSize(); ++k) {
+        const auto& row = filteredRows.get(k);
         outFile << row.first << "," << row.second << "\n";
         std::cout << "[DEBUG] Writing row to output: " << row.first << "," << row.second << "\n";
     }
@@ -115,8 +91,6 @@ void crossJoinWithFilter(rapidcsv::Document& table1, rapidcsv::Document& table2,
     outFile.close();
     std::cout << "[DEBUG] Filtered cross join result has been written to cross_join_result.csv\n";
 }
-
-
 
 void selectFromTables(const std::string& command, TableJson& tableJS) {
     std::istringstream iss(command);
@@ -128,26 +102,22 @@ void selectFromTables(const std::string& command, TableJson& tableJS) {
     while (iss >> word && word != "FROM") {
         if (word.back() == ',') word.pop_back();
         selectedColumns.add(word);
-        std::cout << "[DEBUG] Selected column: " << word << "\n";
     }
 
     while (iss >> tableName) {
         if (tableName == "WHERE") break;
         if (tableName.back() == ',') tableName.pop_back();
         tableNames.add(tableName);
-        std::cout << "[DEBUG] Table name: " << tableName << "\n";
     }
 
-    // Загружаем данные для таблиц
     rapidcsv::Document table1(tableJS.schemeName + "/" + tableNames.get(0) + "/1.csv");
     rapidcsv::Document table2(tableJS.schemeName + "/" + tableNames.get(1) + "/1.csv");
 
-    // Ищем условие WHERE
     size_t wherePos = command.find("WHERE");
     std::string whereCol1, whereCond1, whereCol2, whereCond2, logicalOp;
 
     if (wherePos != std::string::npos) {
-        std::string condition = command.substr(wherePos + 5); // Извлекаем строку после WHERE
+        std::string condition = command.substr(wherePos + 5);
         size_t andPos = condition.find(" AND ");
         size_t orPos = condition.find(" OR ");
 
@@ -176,16 +146,5 @@ void selectFromTables(const std::string& command, TableJson& tableJS) {
         }
     }
 
-    std::cout << "[DEBUG] whereCol1: " << whereCol1 << "\n";
-    std::cout << "[DEBUG] whereCond1: " << whereCond1 << "\n";
-    std::cout << "[DEBUG] whereCol2: " << whereCol2 << "\n";
-    std::cout << "[DEBUG] whereCond2: " << whereCond2 << "\n";
-    std::cout << "[DEBUG] logicalOp: " << logicalOp << "\n";
-
-    std::cout << "[DEBUG] Table 1 Data:\n";
-
-
-    // Если условие WHERE существует, выполняем crossJoin с фильтрацией
     crossJoinWithFilter(table1, table2, selectedColumns, whereCol1, whereCond1, whereCol2, whereCond2, logicalOp);
 }
-
