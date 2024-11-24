@@ -1,0 +1,42 @@
+--массив--
+./dbms --file data.txt --query 'MPUSH 0 Hello'
+./dbms --file data.txt --query 'MDEL 0'
+./dbms --file data.txt --query 'MGET 0'
+./dbms --file data.txt --query 'MREPLACE 0 World'
+
+
+--стэк--
+./dbms --file data.txt --query 'SPUSH Hello'
+./dbms --file data.txt --query 'SPOP'
+
+
+--очередь--
+./dbms --file data.txt --query 'QPUSH Hello'
+./dbms --file data.txt --query 'QPOP'
+
+
+--односвяз лист-- 
+./dbms --file data.txt --query 'LSADDHEAD Hello'
+./dbms --file data.txt --query 'LSADDTAIL World'
+./dbms --file data.txt --query 'LSDELHEAD'
+./dbms --file data.txt --query 'LSDELTAIL'
+
+
+--двусвяз лист--
+./dbms --file data.txt --query 'LDADDHEAD Hello'
+./dbms --file data.txt --query 'LDADDTAIL World'
+./dbms --file data.txt --query 'LDDELHEAD'
+./dbms --file data.txt --query 'LDDELTAIL'
+
+--принт--
+./dbms --file data.txt --query 'PRINT'
+
+--хэш таблица-- 
+./dbms --file data.txt --query 'HSET key2 data1'
+./dbms --file data.txt --query 'HDEL key2' 
+./dbms --file data.txt --query 'HGET key 2'
+
+--дерево--
+./dbms --file tree.txt --query 'TINSERT 2'
+./dbms --file tree.txt --query 'TISCBT' 
+./dbms --file tree.txt --query 'TFIND 5'
