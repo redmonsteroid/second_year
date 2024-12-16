@@ -269,6 +269,7 @@ void CBTree::saveToBinaryFile(const std::string& filename) const {
     outFile.close();
 }
 
+
 void CBTree::loadFromBinaryFile(const std::string& filename) {
     std::ifstream inFile(filename, std::ios::binary);
     if (!inFile) {
@@ -455,10 +456,10 @@ void DoublyLinkedList::clear() {
     }
 }
 
-void DoublyLinkedList::saveToBinaryFile(const string& filename) const {
-    ofstream outFile(filename, ios::binary);
+void DoublyLinkedList::saveToBinaryFile(const std::string& filename) const {
+    std::ofstream outFile(filename, std::ios::binary);
     if (!outFile) {
-        cout << "Cannot open file for binary writing: " << filename << endl;
+        std::cout << "Cannot open file for binary writing: " << filename << std::endl;
         return;
     }
     DoublyNode* current = head;
@@ -471,23 +472,24 @@ void DoublyLinkedList::saveToBinaryFile(const string& filename) const {
     outFile.close();
 }
 
-void DoublyLinkedList::loadFromBinaryFile(const string& filename) {
-    ifstream inFile(filename, ios::binary);
+void DoublyLinkedList::loadFromBinaryFile(const std::string& filename) {
+    std::ifstream inFile(filename, std::ios::binary);
     if (!inFile) {
-        cout << "Cannot open file for binary reading: " << filename << endl;
+        std::cout << "Cannot open file for binary reading: " << filename << std::endl;
         return;
     }
-    clear(); // Очистить текущий список перед загрузкой
-    while (!inFile.eof()) {
+    clear(); // Очищаем текущий список перед загрузкой
+    while (true) {
         size_t len;
         inFile.read(reinterpret_cast<char*>(&len), sizeof(len));
         if (inFile.eof()) break; // Проверка конца файла
-        string value(len, '\0');
+        std::string value(len, '\0');
         inFile.read(&value[0], len);
         addToTail(value);
     }
     inFile.close();
 }
+
 
 
 void DoublyLinkedList::saveToFile(const std::string& filename) {
@@ -635,7 +637,6 @@ void HashTable::saveToBinaryFile(const std::string& filename) const {
         return;
     }
     outFile.write(reinterpret_cast<const char*>(&capacity), sizeof(capacity));
-
     for (int i = 0; i < capacity; ++i) {
         int chainLength = 0;
         HashNode* node = table[i];
@@ -644,7 +645,6 @@ void HashTable::saveToBinaryFile(const std::string& filename) const {
             node = node->next;
         }
         outFile.write(reinterpret_cast<const char*>(&chainLength), sizeof(chainLength));
-
         node = table[i];
         while (node) {
             size_t keySize = node->key.size();
@@ -659,13 +659,13 @@ void HashTable::saveToBinaryFile(const std::string& filename) const {
     outFile.close();
 }
 
+
 void HashTable::loadFromBinaryFile(const std::string& filename) {
     std::ifstream inFile(filename, std::ios::binary);
     if (!inFile) {
         std::cout << "Cannot open file for binary reading: " << filename << std::endl;
         return;
     }
-
     clear();
     inFile.read(reinterpret_cast<char*>(&capacity), sizeof(capacity));
     table = new HashNode*[capacity];
@@ -695,6 +695,7 @@ void HashTable::loadFromBinaryFile(const std::string& filename) {
     }
     inFile.close();
 }
+
 
 // Функция для загрузки данных из файла
 void HashTable::loadFromFile(const std::string& filename) {
@@ -1064,10 +1065,10 @@ void Stack::loadFromFile(const string& filename) {
 
 
 //сериализация/десериализация 
-void Array::saveToBinaryFile(const string& filename) const {
-    ofstream outFile(filename, ios::binary);
+void Array::saveToBinaryFile(const std::string& filename) const {
+    std::ofstream outFile(filename, std::ios::binary);
     if (!outFile) {
-        cout << "Cannot open file for binary writing: " << filename << endl;
+        std::cout << "Cannot open file for binary writing: " << filename << std::endl;
         return;
     }
     outFile.write(reinterpret_cast<const char*>(&size), sizeof(size));
@@ -1080,16 +1081,17 @@ void Array::saveToBinaryFile(const string& filename) const {
     outFile.close();
 }
 
-void Array::loadFromBinaryFile(const string& filename) {
-    ifstream inFile(filename, ios::binary);
+
+void Array::loadFromBinaryFile(const std::string& filename) {
+    std::ifstream inFile(filename, std::ios::binary);
     if (!inFile) {
-        cout << "Cannot open file for binary reading: " << filename << endl;
+        std::cout << "Cannot open file for binary reading: " << filename << std::endl;
         return;
     }
     inFile.read(reinterpret_cast<char*>(&size), sizeof(size));
     inFile.read(reinterpret_cast<char*>(&maxCapacity), sizeof(maxCapacity));
     delete[] data;
-    data = new string[maxCapacity];
+    data = new std::string[maxCapacity];
     for (int i = 0; i < size; ++i) {
         size_t len;
         inFile.read(reinterpret_cast<char*>(&len), sizeof(len));
@@ -1098,6 +1100,7 @@ void Array::loadFromBinaryFile(const string& filename) {
     }
     inFile.close();
 }
+
 
 void Queue::saveToBinaryFile(const string& filename) const {
     ofstream outFile(filename, ios::binary);

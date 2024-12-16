@@ -1,0 +1,37 @@
+## проверка доступа к api
+curl -X GET "http://127.0.0.1:5000/"
+
+## конфигурация
+curl -X POST "http://127.0.0.1:5000/config" -H "Content-Type: application/json" -d '{"config_file": "config.json"}'
+
+## пример вывода содержимого 
+curl -X GET "http://127.0.0.1:5000/select?columns=*&table=lot"
+
+## создание пользователей 
+curl -X POST "http://127.0.0.1:5000/user" \
+-H "Content-Type: application/json" \
+-d '{"username": "User1"}'
+
+curl -X POST "http://127.0.0.1:5000/user" \
+-H "Content-Type: application/json" \
+-d '{"username": "User2"}'
+
+curl -X POST "http://127.0.0.1:5000/user" \
+-H "Content-Type: application/json" \
+-d '{"username": "User3"}'
+
+## Продажа/ покупка (там где x-user-key вставить сгенерированный пользовательский)
+curl -X POST "http://127.0.0.1:5000/order" \ 
+  -H "Content-Type: application/json" \
+  -H "X-USER-KEY: 6065111702" \
+  -d '{"pair_id": 1, "quantity": 300, "price": 0.015, "type": "buy"}'
+
+curl -X POST "http://127.0.0.1:5000/order" \
+  -H "Content-Type: application/json" \
+  -H "X-USER-KEY: 5155190477" \
+  -d '{"pair_id": 1, "quantity": 200, "price": 0.01, "type": "sell"}'
+
+
+## Проверка баланса
+curl -X GET http://localhost:5000/balance \
+     -H "X-USER-KEY: ключ"

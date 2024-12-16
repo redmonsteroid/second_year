@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  db:
+    build: ..
+    ports:
+      - "7432:7432"
+
+  crypt:
+    build:      
+      context: ..
+      dockerfile: crypt/Dockerfile
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db

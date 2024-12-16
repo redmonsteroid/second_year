@@ -1,0 +1,278 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>myqueue: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">myqueue/main.go (92.8%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "fmt"
+        "os"
+        "strings"
+)
+
+// Структура Node для элементов очереди
+type Node struct {
+        data string
+        next *Node
+}
+
+// Структура Queue для управления очередью
+type Queue struct {
+        front *Node
+        end   *Node
+        size  int
+}
+
+// Метод Push добавляет элемент в очередь
+func (q *Queue) Push(value string) <span class="cov8" title="1">{
+        newNode := &amp;Node{data: value}
+        if q.end == nil </span><span class="cov8" title="1">{
+                q.front = newNode
+                q.end = newNode
+        }</span> else<span class="cov8" title="1"> {
+                q.end.next = newNode
+                q.end = newNode
+        }</span>
+        <span class="cov8" title="1">q.size++</span>
+}
+
+// Метод Pop удаляет элемент из очереди
+func (q *Queue) Pop() <span class="cov8" title="1">{
+        if q.front == nil </span><span class="cov8" title="1">{
+                fmt.Println("Queue is empty.")
+                return
+        }</span>
+        <span class="cov8" title="1">temp := q.front
+        q.front = q.front.next
+        if q.front == nil </span><span class="cov8" title="1">{
+                q.end = nil
+        }</span>
+        <span class="cov8" title="1">q.size--
+        fmt.Println("Popped:", temp.data)</span>
+}
+
+// Метод Print выводит все элементы очереди
+func (q *Queue) Print() <span class="cov8" title="1">{
+        temp := q.front
+        for temp != nil </span><span class="cov8" title="1">{
+                fmt.Print(temp.data, " ")
+                temp = temp.next
+        }</span>
+        <span class="cov8" title="1">fmt.Println()</span>
+}
+
+// Метод SaveToFile сохраняет очередь в файл
+func (q *Queue) SaveToFile(filename string) <span class="cov8" title="1">{
+        file, err := os.Create(filename)
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Println("Cannot open file for writing:", filename)
+                return
+        }</span>
+        <span class="cov8" title="1">defer file.Close()
+
+        temp := q.front
+        for temp != nil </span><span class="cov8" title="1">{
+                _, err := fmt.Fprintln(file, temp.data)
+                if err != nil </span><span class="cov0" title="0">{
+                        fmt.Println("Error writing to file:", err)
+                        return
+                }</span>
+                <span class="cov8" title="1">temp = temp.next</span>
+        }
+}
+
+// Метод LoadFromFile загружает элементы в очередь из файла
+func (q *Queue) LoadFromFile(filename string) <span class="cov8" title="1">{
+        file, err := os.Open(filename)
+        if err != nil </span><span class="cov8" title="1">{
+                fmt.Println("Cannot open file for reading:", filename)
+                return
+        }</span>
+        <span class="cov8" title="1">defer file.Close()
+
+        var value string
+        for </span><span class="cov8" title="1">{
+                _, err := fmt.Fscanf(file, "%s\n", &amp;value)
+                if err != nil </span><span class="cov8" title="1">{
+                        break</span>
+                }
+                <span class="cov8" title="1">q.Push(value)</span>
+        }
+}
+
+// Функция для обработки аргументов командной строки
+func processArguments(args []string) (string, string, error) <span class="cov8" title="1">{
+        if len(args) &lt; 3 </span><span class="cov8" title="1">{
+                return "", "", fmt.Errorf("insufficient arguments")
+        }</span>
+
+        <span class="cov8" title="1">var filename string
+        var query string
+
+        for i := 1; i &lt; len(args); i++ </span><span class="cov8" title="1">{
+                arg := args[i]
+                if arg == "--file" &amp;&amp; i+1 &lt; len(args) </span><span class="cov8" title="1">{
+                        filename = args[i+1]
+                        i++
+                }</span> else<span class="cov8" title="1"> if arg == "--query" &amp;&amp; i+1 &lt; len(args) </span><span class="cov8" title="1">{
+                        query = args[i+1]
+                        i++
+                }</span>
+        }
+
+        <span class="cov8" title="1">if filename == "" || query == "" </span><span class="cov8" title="1">{
+                return "", "", fmt.Errorf("missing required arguments")
+        }</span>
+
+        <span class="cov8" title="1">return filename, query, nil</span>
+}
+
+// Функция для выполнения операций с очередью
+func executeQueueOperations(filename string, query string) error <span class="cov8" title="1">{
+        queue := &amp;Queue{}
+        queue.LoadFromFile(filename)
+        processCommand(query, queue)
+        queue.SaveToFile(filename)
+        return nil
+}</span>
+
+// Функция для обработки команд
+func processCommand(command string, queue *Queue) <span class="cov8" title="1">{
+        tokens := strings.Fields(command)
+
+        if len(tokens) == 0 </span><span class="cov8" title="1">{
+                fmt.Println("Error: Command is empty.")
+                return
+        }</span>
+
+        <span class="cov8" title="1">switch tokens[0] </span>{
+        case "QPUSH":<span class="cov8" title="1">
+                if len(tokens) == 2 </span><span class="cov8" title="1">{
+                        queue.Push(tokens[1])
+                }</span> else<span class="cov8" title="1"> {
+                        fmt.Println("Error: QPUSH command requires 1 argument.")
+                }</span>
+        case "QPOP":<span class="cov8" title="1">
+                queue.Pop()</span>
+        case "QPRINT":<span class="cov8" title="1">
+                queue.Print()</span>
+        default:<span class="cov8" title="1">
+                fmt.Println("Error: Unknown command:", tokens[0])</span>
+        }
+}
+
+func main() <span class="cov8" title="1">{
+        // Обрабатываем аргументы
+        filename, query, err := processArguments(os.Args)
+        if err != nil </span><span class="cov8" title="1">{
+                fmt.Println("Error:", err)
+                return // завершение без ошибки выхода
+        }</span>
+
+        // Выполняем операции с очередью
+        <span class="cov8" title="1">err = executeQueueOperations(filename, query)
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Println("Error:", err)
+                return // завершение без ошибки выхода
+        }</span>
+}
+
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

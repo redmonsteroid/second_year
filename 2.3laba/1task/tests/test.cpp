@@ -547,6 +547,27 @@ TEST(DoublyLinkedListTest, Print) {
     std::cout.rdbuf(old); // Восстанавливаем std::cout
 }
 
+TEST(DoublyLinkedListTest, SaveToFile) {
+    DoublyLinkedList list;
+    list.addToTail("first");
+    list.addToTail("second");
+    list.addToTail("third");
+
+    std::string filename = "test_output.txt";
+    list.saveToFile(filename);  // Сохраняем список в файл
+
+    // Проверяем, что файл существует и содержит ожидаемые данные
+    std::ifstream file(filename);
+    ASSERT_TRUE(file.is_open()) << "Не удалось открыть файл для чтения.";
+
+    std::string content;
+    std::getline(file, content);
+    file.close();
+    remove(filename.c_str());  // Удаляем файл после использования
+
+    // Проверяем, что содержимое файла совпадает с ожидаемым результатом
+    EXPECT_EQ(content, "first second third ");
+}
 
 // Тест для метода loadFromFile (загрузка из файла)
 TEST(DoublyLinkedListTest, LoadFromFile) {
