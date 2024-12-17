@@ -1,4 +1,3 @@
-
 services:
   postgres:
     image: postgres:16
@@ -31,6 +30,15 @@ services:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+
+  client:
+    build: ./client
+    ports:
+      - "3001:3001"  # Изменённый внешний порт
+    volumes:
+      - ./client:/app
+    depends_on:
+      - server
 
   server:
     build: ./server

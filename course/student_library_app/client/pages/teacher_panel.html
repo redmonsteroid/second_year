@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher Panel</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Teacher Panel</h1>
+    <button onclick="logout()">Logout</button>
+  </header>
+
+  <main>
+    <section>
+      <h2>Add a New Book</h2>
+      <form id="add-book-form">
+        <input type="text" id="book-title" placeholder="Book Title" required>
+        <input type="text" id="book-download-link" placeholder="Download Link">
+        <input type="text" id="book-publication-city" placeholder="Publication City">
+        <input type="text" id="book-publisher" placeholder="Publisher">
+        <input type="number" id="book-publication-year" placeholder="Publication Year">
+        <input type="number" id="book-page-count" placeholder="Page Count">
+        <input type="text" id="book-additional-info" placeholder="Additional Info">
+
+        <h3>Authors</h3>
+        <div id="authors-container">
+          <div class="author-entry">
+            <input type="text" class="author-last-name" placeholder="Last Name">
+            <input type="text" class="author-first-name" placeholder="First Name">
+            <input type="text" class="author-middle-name" placeholder="Middle Name">
+          </div>
+        </div>
+        <button type="button" onclick="addAuthorField()">Add Author</button>
+
+        <button type="submit">Add Book</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Your Books</h2>
+      <ul id="book-list"></ul>
+    </section>
+  </main>
+
+  <script src="../js/teacher_panel.js"></script>
+</body>
+</html>

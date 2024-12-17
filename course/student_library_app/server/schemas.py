@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field
+from typing import Optional, List
 
 class UserUpdatePassword(BaseModel):
     old_password: str
@@ -35,19 +35,56 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-# Базовая схема для книги
-class BookBase(BaseModel):
-    title: str
-    author: str
+# Схема для создания автора
+class AuthorCreate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    middle_name: Optional[str] = None
 
-# Схема для создания книги
-class BookCreate(BookBase):
-    pass
-
-# Схема для ответа при создании книги
-class BookResponse(BookBase):
+# Схема для отображения автора
+class AuthorResponse(AuthorCreate):
     id: int
-    owner_id: int
 
     class Config:
-        from_attributes = True  # Используем 'from_attributes' вместо 'orm_mode' для Pydantic v2
+        orm_mode = True
+
+# Схема для создания книги
+class BookCreate(BaseModel):
+    title: str
+    author: Optional[str] = None
+    download_link: Optional[str] = None
+    publication_city: str | None = "Unknown"
+    publisher: str
+    publication_year: int
+    page_count: int
+    additional_info: Optional[str] = None
+    authors: List["AuthorCreate"] = Field(default_factory=list)
+
+    class Config:
+        from_attributes = True
+
+# Схема для отображения книги
+class BookResponse(BookCreate):
+    id: int
+    owner_id: int
+    authors: List[AuthorResponse]
+
+    class Config:
+        from_attributes = True
+
+
+# Схема для создания пользователя
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    role: str
+
+# Схема для отображения пользователя
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    role: str
+
+    class Config:
+        orm_mode = True
+
