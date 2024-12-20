@@ -1,40 +1,28 @@
-document.getElementById("login-btn").addEventListener("click", async () => {
-  const username = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
+document.addEventListener('DOMContentLoaded', () => {
+  // Считываем тему из localStorage
+  const currentTheme = localStorage.getItem('theme');
+  if (currentTheme === 'dark') {
+    document.body.classList.add('dark-mode');
+  }
 
-  try {
-    const response = await fetch("http://127.0.0.1:8000/login/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: `username=${username}&password=${password}`,
+  const sidebar = document.getElementById('sidebar');
+  const menuToggle = document.getElementById('menu-toggle');
+  const themeToggleMenu = document.getElementById('theme-toggle-menu');
+
+  if (menuToggle) {
+    menuToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
     });
+  }
 
-    if (!response.ok) {
-      throw new Error("Invalid credentials");
-    }
-
-    const data = await response.json();
-    localStorage.setItem("token", data.access_token);
-
-    // Получение данных пользователя
-    const userResponse = await fetch("http://127.0.0.1:8000/users/me/", {
-      headers: {
-        Authorization: `Bearer ${data.access_token}`,
-      },
+  if (themeToggleMenu) {
+    themeToggleMenu.addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      if (document.body.classList.contains('dark-mode')) {
+        localStorage.setItem('theme', 'dark');
+      } else {
+        localStorage.setItem('theme', 'light');
+      }
     });
-
-    const user = await userResponse.json();
-    console.log("User data:", user); // Диагностика
-
-    if (user.role === "teacher") {
-      window.location.href = "../pages/teacher_panel.html";
-    } else {
-      window.location.href = "../pages/library.html";
-    }
-  } catch (error) {
-    console.error(error);
-    alert("Login failed");
   }
 });

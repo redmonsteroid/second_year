@@ -1,20 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Login</title>
-  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="../css/login.css">
 </head>
 <body>
-  <div class="container">
-    <h2>Login</h2>
-    <input type="text" id="username" placeholder="Username">
-    <input type="password" id="password" placeholder="Password">
-    <button id="login-btn">Login</button>
-    <p>Don't have an account? <a href="register.html">Register here</a></p>
-  </div>
+  <header>
+    <nav class="navbar">
+      <h1>Login</h1>
+      <div class="right-buttons">
+        <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i> Menu</button>
+      </div>
+    </nav>
+  </header>
 
+  <aside class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="../index.html"><i class="fas fa-home"></i> Home</a></li>
+      <li><a href="./register.html"><i class="fas fa-user-plus"></i> Register</a></li>
+      <li><a href="#" class="theme-toggle-menu" id="theme-toggle-menu"><i class="fas fa-adjust"></i> Toggle Theme</a></li>
+    </ul>
+  </aside>
+
+  <main class="main-content">
+    <div class="login-card">
+      <h2>Please log in</h2>
+      <div class="input-group">
+        <input type="text" id="username" placeholder="Username">
+      </div>
+      <div class="input-group">
+        <input type="password" id="password" placeholder="Password">
+      </div>
+      <button id="login-btn" class="login-btn">Login</button>
+      <p>Don't have an account? <a href="register.html">Register here</a></p>
+      <p id="error-message" class="error-message"></p>
+    </div>
+  </main>
+
+  <!-- main.js для переключения темы и меню -->
+  <script src="../js/main.js"></script>
+  <!-- login.js для обработки логина -->
   <script src="../js/login.js"></script>
 </body>
 </html>

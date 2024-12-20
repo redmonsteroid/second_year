@@ -1,36 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Student Library App</title>
-  <link rel="stylesheet" href="./css/styles.css">
+  <link rel="stylesheet" href="../css/index.css" />
+  <link rel="icon" href="./favicon.ico" type="image/x-icon" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
   <header>
-    <div class="nav-buttons">
-      <button id="login-btn" onclick="window.location.href='./pages/login.html'">Login</button>
-      <button id="register-btn" onclick="window.location.href='./pages/register.html'">Register</button>
-    </div>
+    <nav class="navbar">
+      <h1>Student Library App</h1>
+      <div class="right-buttons">
+        <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i> Menu</button>
+      </div>
+    </nav>
   </header>
 
-  <main>
-    <div class="content">
-      <h1 class="app-title">Student Library App</h1>
-      <p class="app-description">
-        Welcome to the Student Library App! This application allows teachers to manage the library's collection of books and lets students browse and explore available books. Register or log in to get started.
+  <aside class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="./pages/info.html"><i class="fas fa-user"></i> About Developer</a></li>
+      <li><a href="./pages/login.html"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+      <li><a href="./pages/register.html"><i class="fas fa-user-plus"></i> Register</a></li>
+      <li><a href="#" class="theme-toggle-menu" id="theme-toggle-menu"><i class="fas fa-adjust"></i> Toggle Theme</a></li>
+    </ul>
+  </aside>
+
+  <main class="main-content">
+    <div class="card">
+      <h2>Welcome to the Student Library App</h2>
+      <p>
+        This application allows teachers to manage the library's collection of books and lets students browse and explore available books. Register or log in to get started.
       </p>
     </div>
   </main>
 
-  <script src="./js/main.js"></script>
+  <script src="../js/main.js"></script>
 </body>
 </html>
-
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Student Library App</title>
-  <link rel="stylesheet" href="./css/styles.css">
-  <link rel="icon" href="./favicon.ico" type="image/x-icon">
-</head>

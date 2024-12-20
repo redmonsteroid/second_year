@@ -1,16 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Information</title>
-  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="../css/info.css">
 </head>
 <body>
-  <h1>Information</h1>
-  <p>Developer: Краснятов Данил</p>
-  <p>Email: danilzagibalov@yandex.ru</p>
-  <p>Version: 1.0.0</p>
-  <a href="dashboard.html">Back to Dashboard</a>
+  <header>
+    <nav class="navbar">
+      <h1>Information</h1>
+      <div class="right-buttons">
+        <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i> Menu</button>
+      </div>
+    </nav>
+  </header>
+
+  <aside class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="../index.html"><i class="fas fa-home"></i> Home</a></li>
+      <li><a href="./login.html"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+      <li><a href="./register.html"><i class="fas fa-user-plus"></i> Register</a></li>
+      <li><a href="#" class="theme-toggle-menu" id="theme-toggle-menu"><i class="fas fa-adjust"></i> Toggle Theme</a></li>
+    </ul>
+  </aside>
+
+  <main class="main-content">
+    <div class="info-card">
+      <h2>Developer: Краснятов Данил</h2>
+      <p>Email: danilzagibalov@yandex.ru</p>
+      <p>Version: 1.0.0</p>
+    </div>
+  </main>
+
+  <script src="../js/main.js"></script>
 </body>
 </html>
