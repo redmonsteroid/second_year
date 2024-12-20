@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from database import SessionLocal, engine
 import models
 import schemas
@@ -91,7 +91,8 @@ def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
 
 # Добавление книги
 @app.post("/books/", response_model=schemas.BookResponse)
-def create_book(book: schemas.BookCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def create_book(book: schemas.BookCreate, db: Session = Depends(get_db), current_user: schemas.User = Depends(get_current_user)):
+    # Создаём книгу без авторов
     db_book = models.Book(
         title=book.title,
         download_link=book.download_link,
@@ -103,25 +104,41 @@ def create_book(book: schemas.BookCreate, db: Session = Depends(get_db), current
         owner_id=current_user.id
     )
 
-    # Добавление авторов
+    # Добавляем книгу в базу данных
+    db.add(db_book)
+    db.commit()
+    db.refresh(db_book)
+
+    # Добавляем авторов и связываем их с книгой
     for author_data in book.authors:
-        author = db.query(models.Author).filter_by(
+        # Проверяем, существует ли автор в базе данных
+        db_author = db.query(models.Author).filter_by(
             first_name=author_data.first_name,
             last_name=author_data.last_name,
             middle_name=author_data.middle_name
         ).first()
 
-        if not author:
-            author = models.Author(**author_data.dict())
-            db.add(author)
-            db.flush()  # Чтобы получить ID для нового автора
+        # Если автор не существует, создаём нового
+        if not db_author:
+            db_author = models.Author(
+                first_name=author_data.first_name,
+                last_name=author_data.last_name,
+                middle_name=author_data.middle_name
+            )
+            db.add(db_author)
+            db.flush()  # Используем flush(), чтобы получить id нового автора до commit
 
-        db_book.authors.append(author)
+        # Создаём связь между книгой и автором
+        book_author = models.BookAuthor(book_id=db_book.id, author_id=db_author.id)
+        db.add(book_author)
 
-    db.add(db_book)
+    # Один раз коммитим все изменения
     db.commit()
     db.refresh(db_book)
+
     return db_book
+
+
 
 
 # Получение всех книг или с фильтрацией
@@ -131,14 +148,26 @@ def get_books(
     title: str | None = Query(None),
     db: Session = Depends(get_db)
 ):
-    query = db.query(models.Book)
-    
-    if author:
-        query = query.filter(models.Book.author.ilike(f"%{author}%"))
-    if title:
-        query = query.filter(models.Book.title.ilike(f"%{title}%"))
+    # Подгружаем информацию о владельце книги
+    books = db.query(models.Book).options(joinedload(models.Book.book_authors).joinedload(models.BookAuthor.author)).all()
 
-    return query.all()
+
+    # Формируем результат с owner_username
+    result = []
+    for book in books:
+        authors = [
+            {"id": ba.author.id, "first_name": ba.author.first_name, "last_name": ba.author.last_name, "middle_name": ba.author.middle_name}
+            for ba in book.book_authors
+        ]
+        book_data = {
+            **book.__dict__,
+            "owner_username": book.owner.username if book.owner else None,
+            "authors": authors
+        }
+        result.append(book_data)
+
+    return result
+
 
 # Удаление книги
 @app.delete("/books/{book_id}")

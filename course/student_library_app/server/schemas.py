@@ -9,6 +9,14 @@ class UserUpdateRole(BaseModel):
     role: str
 
 
+class User(BaseModel):
+    id: int
+    username: str
+    role: str
+
+    class Config:
+        from_attributes = True
+
 # Базовая схема для пользователя
 class UserBase(BaseModel):
     username: str
@@ -42,35 +50,51 @@ class AuthorCreate(BaseModel):
     middle_name: Optional[str] = None
 
 # Схема для отображения автора
-class AuthorResponse(AuthorCreate):
+class AuthorResponse(BaseModel):
     id: int
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    middle_name: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Схема для создания книги
 class BookCreate(BaseModel):
     title: str
-    author: Optional[str] = None
     download_link: Optional[str] = None
-    publication_city: str | None = "Unknown"
-    publisher: str
-    publication_year: int
-    page_count: int
+    publication_city: Optional[str] = None
+    publisher: Optional[str] = None
+    publication_year: Optional[int] = None
+    page_count: Optional[int] = None
     additional_info: Optional[str] = None
-    authors: List["AuthorCreate"] = Field(default_factory=list)
+    authors: List[AuthorCreate] = []
 
     class Config:
         from_attributes = True
 
-# Схема для отображения книги
-class BookResponse(BookCreate):
+
+# Схема для отображения книг
+
+class BookResponse(BaseModel):
     id: int
+    title: str
+    download_link: Optional[str] = None
+    publication_city: Optional[str] = None
+    publisher: Optional[str] = None
+    publication_year: Optional[int] = None
+    page_count: Optional[int] = None
+    additional_info: Optional[str] = None
     owner_id: int
-    authors: List[AuthorResponse]
+    owner_username: Optional[str] = None
+    authors: List[AuthorResponse] = []
 
     class Config:
         from_attributes = True
+
+
+
+
 
 
 # Схема для создания пользователя

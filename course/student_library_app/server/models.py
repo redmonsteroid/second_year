@@ -3,12 +3,17 @@ from sqlalchemy.orm import relationship
 from database import Base
 
 # Промежуточная таблица для связи многие-ко-многим между книгами и авторами
-book_authors = Table(
-    'book_authors',
-    Base.metadata,
-    Column('book_id', Integer, ForeignKey('books.id', ondelete="CASCADE"), primary_key=True),
-    Column('author_id', Integer, ForeignKey('authors.id', ondelete="CASCADE"), primary_key=True)
-)
+
+
+class BookAuthor(Base):
+    __tablename__ = 'book_authors'
+
+    book_id = Column(Integer, ForeignKey('books.id'), primary_key=True)
+    author_id = Column(Integer, ForeignKey('authors.id'), primary_key=True)
+
+    # Опционально добавить связи для удобного доступа
+    book = relationship("Book", back_populates="book_authors")
+    author = relationship("Author", back_populates="book_authors")
 
 class User(Base):
     __tablename__ = "users"
@@ -28,21 +33,25 @@ class Author(Base):
     last_name = Column(String)
     middle_name = Column(String)
 
-    books = relationship("Book", secondary=book_authors, back_populates="authors")
+    
+    book_authors = relationship("BookAuthor", back_populates="author")
 
 class Book(Base):
     __tablename__ = "books"
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
+    download_link = Column(String)
+    owner_id = Column(Integer, ForeignKey("users.id"))
     publication_city = Column(String)
     publisher = Column(String)
     publication_year = Column(Integer)
     page_count = Column(Integer)
     additional_info = Column(String)
-    download_link = Column(String)
-    owner_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="books")
-    authors = relationship("Author", secondary=book_authors, back_populates="books")
+    book_authors = relationship("BookAuthor", back_populates="book", cascade="all, delete-orphan")
+
+
+
 

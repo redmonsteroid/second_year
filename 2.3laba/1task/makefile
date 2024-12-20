@@ -5,7 +5,14 @@ GTEST_LIBS = googletest/build/lib/libgtest.a googletest/build/lib/libgtest_main.
 
 # Исходные файлы и тесты
 SRC = src/mainHeader.cpp
-TEST_SRC = tests/test.cpp
+TEST_SRC = tests/test_array.cpp \
+			tests/test.cpp \
+			tests/test_CBT.cpp \
+			tests/test_DLL.cpp \
+			tests/test_ht.cpp \
+			tests/test_queue.cpp \
+			tests/test_SLL.cpp \
+
 OBJ = $(SRC:.cpp=.o)
 TEST_OBJ = $(TEST_SRC:.cpp=.o)
 
@@ -16,8 +23,9 @@ COVERAGE_DIR = coverage_report
 all: RunTests coverage_report
 
 # Цель для создания исполняемого файла с тестами
-RunTests: $(OBJ) $(TEST_OBJ)
-	$(CXX) $(CXXFLAGS) -o RunTests $(OBJ) $(TEST_OBJ) $(GTEST_LIBS)
+RunTests: $(OBJ) $(TEST_SRC:.cpp=.o)
+	$(CXX) $(CXXFLAGS) -o RunTests $(OBJ) $(TEST_SRC:.cpp=.o) $(GTEST_LIBS)
+
 
 # Компиляция исходных файлов
 %.o: %.cpp
