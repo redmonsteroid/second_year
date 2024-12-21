@@ -1,49 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Teacher Panel</title>
-  <link rel="stylesheet" href="../css/styles.css">
+  <!-- Иконки и стили -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="../css/teacher_panel.css">
 </head>
 <body>
   <header>
-    <h1>Teacher Panel</h1>
-    <button onclick="logout()">Logout</button>
+    <nav class="navbar">
+      <h1>Teacher Panel</h1>
+      <div class="right-buttons">
+        <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i> Menu</button>
+      </div>
+    </nav>
   </header>
 
-  <main>
-    <section>
+  <!-- Боковое меню -->
+  <aside class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="../pages/library.html"><i class="fas fa-book"></i> Library</a></li>
+      <li><button class="theme-toggle-menu" id="theme-toggle-menu"><i class="fas fa-adjust"></i> Toggle Theme</button></li>
+      <li><button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button></li>
+    </ul>
+  </aside>
+
+  <main class="main-content">
+    <section class="form-section">
       <h2>Add a New Book</h2>
       <form id="add-book-form">
-        <input type="text" id="book-title" placeholder="Book Title" required>
-        <input type="text" id="book-download-link" placeholder="Download Link">
-        <input type="text" id="book-publication-city" placeholder="Publication City">
-        <input type="text" id="book-publisher" placeholder="Publisher">
-        <input type="number" id="book-publication-year" placeholder="Publication Year">
-        <input type="number" id="book-page-count" placeholder="Page Count">
-        <input type="text" id="book-additional-info" placeholder="Additional Info">
+        <div class="input-row">
+          <!-- Название книги (обязательное) -->
+          <div class="input-group">
+            <input type="text" id="book-title" placeholder="Book Title" required>
+            <span class="error-message" id="book-title-error"></span>
+          </div>
+          <!-- Ссылка на скачивание -->
+          <div class="input-group">
+            <input type="text" id="book-download-link" placeholder="Download Link">
+            <span class="error-message" id="book-download-link-error"></span>
+          </div>
+        </div>
+
+        <div class="input-row">
+          <!-- Город публикации -->
+          <div class="input-group">
+            <input type="text" id="book-publication-city" placeholder="Publication City">
+            <span class="error-message" id="book-publication-city-error"></span>
+          </div>
+          <!-- Издатель -->
+          <div class="input-group">
+            <input type="text" id="book-publisher" placeholder="Publisher">
+            <span class="error-message" id="book-publisher-error"></span>
+          </div>
+        </div>
+
+        <div class="input-row">
+          <!-- Год публикации -->
+          <div class="input-group">
+            <input type="number" id="book-publication-year" placeholder="Publication Year">
+            <span class="error-message" id="book-publication-year-error"></span>
+          </div>
+          <!-- Кол-во страниц -->
+          <div class="input-group">
+            <input type="number" id="book-page-count" placeholder="Page Count">
+            <span class="error-message" id="book-page-count-error"></span>
+          </div>
+        </div>
+
+        <div class="input-row">
+          <!-- Дополнительная информация -->
+          <div class="input-group">
+            <input type="text" id="book-additional-info" placeholder="Additional Info">
+            <span class="error-message" id="book-additional-info-error"></span>
+          </div>
+        </div>
 
         <h3>Authors</h3>
         <div id="authors-container">
           <div class="author-entry">
-            <input type="text" class="author-last-name" placeholder="Last Name">
-            <input type="text" class="author-first-name" placeholder="First Name">
-            <input type="text" class="author-middle-name" placeholder="Middle Name">
+            <div class="input-group">
+              <input type="text" class="author-last-name" placeholder="Last Name">
+              <span class="error-message author-error"></span>
+            </div>
+            <div class="input-group">
+              <input type="text" class="author-first-name" placeholder="First Name">
+              <span class="error-message author-error"></span>
+            </div>
+            <div class="input-group">
+              <input type="text" class="author-middle-name" placeholder="Middle Name">
+              <span class="error-message author-error"></span>
+            </div>
           </div>
         </div>
-        <button type="button" onclick="addAuthorField()">Add Author</button>
 
-        <button type="submit">Add Book</button>
+        <button type="button" class="add-author-btn" onclick="addAuthorField()">Add Author</button>
+        <button type="submit" class="add-book-btn">Add Book</button>
       </form>
     </section>
 
-    <section>
+    <section class="books-section">
       <h2>Your Books</h2>
       <ul id="book-list"></ul>
     </section>
   </main>
 
+  <!-- main.js отвечает за меню и тему -->
+  <script src="../js/main.js"></script>
+  <!-- teacher_panel.js отвечает за логику добавления книг и их отображение -->
   <script src="../js/teacher_panel.js"></script>
 </body>
 </html>

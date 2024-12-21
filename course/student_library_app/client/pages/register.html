@@ -1,24 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Register</title>
-  <link rel="stylesheet" href="../css/styles.css">
+  <!-- Иконки и стили -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="../css/register.css">
 </head>
 <body>
-  <div class="container">
-    <h2>Register</h2>
-    <input type="text" id="username" placeholder="Username">
-    <input type="password" id="password" placeholder="Password">
-    <select id="role">
-      <option value="teacher">Teacher</option>
-      <option value="student">Student</option>
-    </select>
-    <button id="register-btn">Register</button>
-    <p>Already have an account? <a href="login.html">Login here</a></p>
-  </div>
+  <header>
+    <nav class="navbar">
+      <h1>Register</h1>
+      <div class="right-buttons">
+        <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i> Menu</button>
+      </div>
+    </nav>
+  </header>
 
+  <aside class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="../index.html"><i class="fas fa-home"></i> Home</a></li>
+      <li><a href="./login.html"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+      <li><a href="#" class="theme-toggle-menu" id="theme-toggle-menu"><i class="fas fa-adjust"></i> Toggle Theme</a></li>
+    </ul>
+  </aside>
+
+  <main class="main-content">
+    <div class="register-card">
+      <h2>Register</h2>
+      <form id="register-form">
+        <div class="input-group">
+          <input type="text" id="username" placeholder="Username" required>
+        </div>
+        <div class="input-group">
+          <input type="password" id="password" placeholder="Password" required>
+        </div>
+        <div class="input-group">
+          <select id="role">
+            <option value="teacher">Teacher</option>
+            <option value="student">Student</option>
+          </select>
+        </div>
+        <button id="register-btn" class="register-btn">Register</button>
+      </form>
+      <p>Already have an account? <a href="login.html">Login here</a></p>
+      <div id="message"></div>
+    </div>
+  </main>
+
+  <!-- main.js для переключения темы и меню -->
+  <script src="../js/main.js"></script>
+  <!-- register.js для обработки регистрации -->
   <script src="../js/register.js"></script>
 </body>
 </html>
