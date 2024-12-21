@@ -8,12 +8,19 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-/* ---------- Полезные функции-хелперы для валидации (пример из предыдущего ответа) ---------- */
+/* ---------------- Валидация и вспомогательные функции ---------------- */
+
+/**
+ * Если строка состоит только из пробелов / пуста, заменяем на "N/A".
+ */
 function sanitizeOrNA(value) {
   const trimmed = value.trim();
   return trimmed === "" ? "N/A" : trimmed;
 }
 
+/**
+ * Проверка обязательного поля (название книги)
+ */
 function validateRequired(value, fieldName) {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -22,6 +29,11 @@ function validateRequired(value, fieldName) {
   return "";
 }
 
+/**
+ * Проверка года публикации:
+ * - Может быть пустым => null
+ * - Если заполнен => 4 цифры, от 0 до 2025
+ */
 function validatePublicationYear(value) {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -39,48 +51,48 @@ function validatePublicationYear(value) {
   }
   return { year: parsed, error: "" };
 }
-/* ----------------------------------------------------------------------------------------- */
+
+/* ---------------- Обработка формы добавления книги ---------------- */
 
 async function handleAddBook(event) {
   event.preventDefault();
 
   clearAllErrors();
 
-  // Смотрим, есть ли токен
   const token = localStorage.getItem("token");
   if (!token) {
     alert("Unauthorized. Please login.");
     return;
   }
 
-  // Собираем значения
+  // Собираем значения из полей
   const titleVal = document.getElementById("book-title").value;
   const downloadVal = document.getElementById("book-download-link").value;
-  const cityVal = document.getElementById("book-publication-city").value;
-  const publisherVal = document.getElementById("book-publisher").value;
+  const cityVal = document.getElementById("book-publication-city").value;     // <-- город издательства
+  const publisherVal = document.getElementById("book-publisher").value;      // <-- название издательства
   const yearVal = document.getElementById("book-publication-year").value;
   const pageCountVal = document.getElementById("book-page-count").value;
   const additionalInfoVal = document.getElementById("book-additional-info").value;
 
-  // Валидация заголовка
+  // Проверяем обязательное поле: Title
   const titleError = validateRequired(titleVal, "Book Title");
   if (titleError) {
     showError("book-title-error", titleError);
   }
 
-  // Валидация года
+  // Проверяем год
   const { year, error: yearError } = validatePublicationYear(yearVal);
   if (yearError) {
     showError("book-publication-year-error", yearError);
   }
 
-  // Преобразуем остальные поля (N/A, если пусто)
+  // Остальные поля могут быть пусты => "N/A"
   const finalDownloadLink = sanitizeOrNA(downloadVal);
   const finalCity = sanitizeOrNA(cityVal);
   const finalPublisher = sanitizeOrNA(publisherVal);
   const finalAdditionalInfo = sanitizeOrNA(additionalInfoVal);
 
-  // Page count (необязательное, если не пусто — пытаемся прочитать)
+  // Парсим количество страниц (необязательно)
   let finalPageCount = null;
   const pageTrim = pageCountVal.trim();
   if (pageTrim !== "") {
@@ -98,23 +110,29 @@ async function handleAddBook(event) {
     author.middle_name = sanitizeOrNA(author.middle_name);
   });
 
-  // Если есть ошибки — прекращаем
+  // Если есть ошибки => прерываем
   if (titleError || yearError) {
     console.log("Validation failed. Title error:", titleError, "Year error:", yearError);
     return;
   }
 
-  // Если валидация прошла
-  console.log("Submitting new book with data:", {
+  // Формируем объект для POST /books/
+  // Обратите внимание: bэкенду теперь нужен publisher: { name, city },
+  // а не просто publisher / publication_city
+  const newBookData = {
     title: titleVal.trim(),
     download_link: finalDownloadLink,
-    publication_city: finalCity,
-    publisher: finalPublisher,
-    publication_year: year,
+    publication_year: year,            // либо null
     page_count: finalPageCount,
     additional_info: finalAdditionalInfo,
-    authors
-  });
+    authors: authors,
+    publisher: {
+      name: finalPublisher,
+      city: finalCity
+    }
+  };
+
+  console.log("Submitting new book with data:", newBookData);
 
   try {
     const response = await fetch("http://127.0.0.1:8000/books/", {
@@ -123,16 +141,7 @@ async function handleAddBook(event) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        title: titleVal.trim(),
-        download_link: finalDownloadLink,
-        publication_city: finalCity,
-        publisher: finalPublisher,
-        publication_year: year,
-        page_count: finalPageCount,
-        additional_info: finalAdditionalInfo,
-        authors,
-      }),
+      body: JSON.stringify(newBookData),
     });
 
     if (!response.ok) {
@@ -148,6 +157,8 @@ async function handleAddBook(event) {
   }
 }
 
+/* ---------------- Функции работы с ошибками ---------------- */
+
 function clearAllErrors() {
   const errorSpans = document.querySelectorAll(".error-message");
   errorSpans.forEach(span => {
@@ -162,7 +173,8 @@ function showError(spanId, message) {
   }
 }
 
-// Добавление/удаление авторов
+/* ---------------- Логика с авторами ---------------- */
+
 function addAuthorField() {
   const container = document.getElementById("authors-container");
   const div = document.createElement("div");
@@ -200,7 +212,8 @@ function getAuthors() {
   });
 }
 
-/* ------------------ КНИГИ ------------------ */
+/* ---------------- Загрузка и отображение книг учителя ---------------- */
+
 async function loadBooks() {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -230,19 +243,16 @@ async function loadBooks() {
   }
 }
 
-function displayBooks(books) {
+function displayBooks(allBooks) {
   const bookList = document.getElementById("book-list");
   if (!bookList) return;
-
   bookList.innerHTML = "";
 
-  // Отладка: что лежит в localStorage
   const currentUsername = localStorage.getItem("username");
   console.log("currentUsername from localStorage:", currentUsername);
 
-  // Фильтруем по owner_username
-  const teacherBooks = books.filter(book => {
-    // Отладка: у каждой книги смотрим, какое поле у владельца
+  // Оставляем только книги текущего учителя
+  const teacherBooks = allBooks.filter(book => {
     console.log(`Book ID: ${book.id}, Title: ${book.title}, OwnerUsername: ${book.owner_username}`);
     return book.owner_username === currentUsername;
   });
@@ -250,23 +260,28 @@ function displayBooks(books) {
   console.log("Filtered teacherBooks:", teacherBooks);
 
   teacherBooks.forEach(book => {
+    // Издательство и город теперь внутри book.publisher_rel
+    const publisherName = book.publisher_rel ? book.publisher_rel.name : "N/A";
+    const publisherCity = book.publisher_rel ? book.publisher_rel.city : "N/A";
+
+    // Формируем строку с авторами
+    let authorsText = "N/A";
+    if (book.authors && book.authors.length > 0) {
+      authorsText = book.authors
+        .map(
+          (a) => `${a.last_name} ${a.first_name}${a.middle_name ? " " + a.middle_name : ""}`
+        )
+        .join(", ");
+    }
+
     const li = document.createElement("li");
     li.innerHTML = `
       <strong>Title:</strong> ${book.title || "N/A"} <br>
-      <strong>Authors:</strong> ${
-        book.authors && book.authors.length > 0
-          ? book.authors
-              .map(
-                (a) =>
-                  `${a.last_name} ${a.first_name}${a.middle_name ? " " + a.middle_name : ""}`
-              )
-              .join(", ")
-          : "N/A"
-      } <br>
-      <strong>Publisher:</strong> ${book.publisher || "N/A"} <br>
-      <strong>Publication City:</strong> ${book.publication_city || "N/A"} <br>
-      <strong>Year:</strong> ${book.publication_year || "N/A"} <br>
-      <strong>Pages:</strong> ${book.page_count || "N/A"} <br>
+      <strong>Authors:</strong> ${authorsText} <br>
+      <strong>Publisher:</strong> ${publisherName} <br>
+      <strong>City:</strong> ${publisherCity} <br>
+      <strong>Year:</strong> ${book.publication_year ?? "N/A"} <br>
+      <strong>Pages:</strong> ${book.page_count ?? "N/A"} <br>
       <strong>Additional Info:</strong> ${book.additional_info || "N/A"} <br>
       <strong>Download Link:</strong> ${
         book.download_link
@@ -279,7 +294,7 @@ function displayBooks(books) {
   });
 }
 
-/* ------------------ УДАЛЕНИЕ ------------------ */
+/* ---------------- Удаление книги (только своих) ---------------- */
 async function deleteBook(bookId) {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -308,7 +323,7 @@ async function deleteBook(bookId) {
   }
 }
 
-/* ------------------ ЛОГОУТ ------------------ */
+/* ---------------- ЛОГОУТ ---------------- */
 function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("username");

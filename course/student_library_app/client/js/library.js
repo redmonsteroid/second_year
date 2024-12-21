@@ -1,5 +1,5 @@
-let booksData = [];                 // Исходный массив всех книг
-const uniqueValuesByField = {};     // Словарь множеств уникальных значений по каждому полю
+let booksData = [];                // Исходный массив всех книг
+const uniqueValuesByField = {};    // Словарь множеств уникальных значений по каждому полю
 
 document.addEventListener("DOMContentLoaded", () => {
   loadBooks();
@@ -64,10 +64,10 @@ async function loadBooks() {
     }
 
     booksData = await response.json();
-    // Формируем уникальные значения
+    // Собираем уникальные значения для фильтров
     buildUniqueValues(booksData);
 
-    // Показываем все книги
+    // Отображаем все книги по умолчанию
     displayBooks(booksData);
   } catch (error) {
     console.error(error);
@@ -77,56 +77,69 @@ async function loadBooks() {
 
 /**
  * Собираем уникальные значения (authors, teacher, publisher, city, year, title)
+ * Теперь publisher = publisher_rel.name, city = publisher_rel.city
  */
 function buildUniqueValues(books) {
   uniqueValuesByField.authors = new Set();
   uniqueValuesByField.teacher = new Set();
-  uniqueValuesByField.publisher = new Set();
-  uniqueValuesByField.publication_city = new Set();
+  uniqueValuesByField.publisher = new Set();         // name издательства
+  uniqueValuesByField.publication_city = new Set();  // city издательства
   uniqueValuesByField.publication_year = new Set();
   uniqueValuesByField.title = new Set();
 
   books.forEach((book) => {
-    // authors
+    // Authors
     if (book.authors && Array.isArray(book.authors)) {
       book.authors.forEach((a) => {
-        const fullName = `${a.last_name} ${a.first_name}${a.middle_name ? " " + a.middle_name : ""}`;
-        uniqueValuesByField.authors.add(fullName.trim());
+        const fullName = `${a.last_name} ${a.first_name}${a.middle_name ? " " + a.middle_name : ""}`.trim();
+        uniqueValuesByField.authors.add(fullName);
       });
     }
-    // teacher
-    if (book.owner_username) uniqueValuesByField.teacher.add(book.owner_username);
-    // publisher
-    if (book.publisher) uniqueValuesByField.publisher.add(book.publisher);
-    // city
-    if (book.publication_city) uniqueValuesByField.publication_city.add(book.publication_city);
-    // year
-    if (book.publication_year) uniqueValuesByField.publication_year.add(String(book.publication_year));
-    // title
-    if (book.title) uniqueValuesByField.title.add(book.title);
+    // Teacher
+    if (book.owner_username) {
+      uniqueValuesByField.teacher.add(book.owner_username);
+    }
+
+    // Publisher (берём из book.publisher_rel?.name)
+    if (book.publisher_rel && book.publisher_rel.name) {
+      uniqueValuesByField.publisher.add(book.publisher_rel.name);
+    }
+
+    // City (берём из book.publisher_rel?.city)
+    if (book.publisher_rel && book.publisher_rel.city) {
+      uniqueValuesByField.publication_city.add(book.publisher_rel.city);
+    }
+
+    // Year
+    if (book.publication_year) {
+      uniqueValuesByField.publication_year.add(String(book.publication_year));
+    }
+
+    // Title
+    if (book.title) {
+      uniqueValuesByField.title.add(book.title);
+    }
   });
 
-  // Превращаем множества в массивы
+  // Превращаем множества в массивы (и сортируем)
   for (let field in uniqueValuesByField) {
     uniqueValuesByField[field] = Array.from(uniqueValuesByField[field]).sort();
   }
 }
 
 /**
- * Когда выбираем новое поле в "Filter by"
- * -> Перезаполняем чекбоксы в дропдауне
+ * Генерация чекбоксов при смене типа фильтра
  */
 function onFilterTypeChange() {
   const filterType = document.getElementById("filter-type").value;
   const dropdownCheckboxList = document.getElementById("dropdown-checkbox-list");
   const dropdownSearch = document.getElementById("dropdown-search");
 
-  // Очищаем
+  // Очищаем старый список
   dropdownCheckboxList.innerHTML = "";
-  dropdownSearch.value = ""; // сбрасываем поисковое поле
+  dropdownSearch.value = "";
 
   if (!filterType) {
-    // Если ничего не выбрано, выходим
     return;
   }
 
@@ -141,12 +154,10 @@ function onFilterTypeChange() {
     label.appendChild(document.createTextNode(val));
     dropdownCheckboxList.appendChild(label);
   });
-
-  // По умолчанию скрыто, пользователь сам нажмёт на кнопку, чтобы раскрыть
 }
 
 /**
- * Фильтр чекбоксов внутри дропдауна (поиском)
+ * Поиск по списку чекбоксов (чтобы отфильтровать варианты)
  */
 function filterCheckBoxList(searchStr) {
   const dropdownCheckboxList = document.getElementById("dropdown-checkbox-list");
@@ -163,7 +174,7 @@ function filterCheckBoxList(searchStr) {
 }
 
 /**
- * Применяем фильтр (по выбранному полю и отмеченным чекбоксам)
+ * Применяем фильтр
  */
 function applyFilter() {
   const filterType = document.getElementById("filter-type").value;
@@ -180,29 +191,37 @@ function applyFilter() {
   ).map(cb => cb.value);
 
   if (checkedValues.length === 0) {
-    // Если ни один чекбокс не выбран, показываем всё
+    // Если ни один не выбран, показываем все
     displayBooks(booksData);
     return;
   }
 
+  // Фильтруем
   let filtered = booksData.filter((book) => {
     switch (filterType) {
-      case "authors":
-        // Проверяем, есть ли пересечение с авторами
-        if (!book.authors) return false;
-        const authorsFullNames = book.authors.map((a) => {
-          return (a.last_name + " " + a.first_name + (a.middle_name ? " " + a.middle_name : "")).trim();
-        });
+      case "authors": {
+        if (!book.authors || book.authors.length === 0) return false;
+        const authorsFullNames = book.authors.map((a) =>
+          `${a.last_name} ${a.first_name}${a.middle_name ? " " + a.middle_name : ""}`.trim()
+        );
         return authorsFullNames.some((name) => checkedValues.includes(name));
-
+      }
       case "teacher":
         return checkedValues.includes(book.owner_username);
+
       case "publisher":
-        return checkedValues.includes(book.publisher);
+        // book.publisher_rel?.name
+        if (!book.publisher_rel) return false;
+        return checkedValues.includes(book.publisher_rel.name);
+
       case "publication_city":
-        return checkedValues.includes(book.publication_city);
+        // book.publisher_rel?.city
+        if (!book.publisher_rel) return false;
+        return checkedValues.includes(book.publisher_rel.city);
+
       case "publication_year":
         return checkedValues.includes(String(book.publication_year));
+
       case "title":
         return checkedValues.includes(book.title);
 
@@ -215,7 +234,7 @@ function applyFilter() {
 }
 
 /**
- * Отображение книг
+ * Отображение (рендер) книг в списке
  */
 function displayBooks(books) {
   const bookList = document.getElementById("book-list");
@@ -223,26 +242,32 @@ function displayBooks(books) {
   bookList.innerHTML = "";
 
   books.forEach((book) => {
+    // Издательство (name) и город (city)
+    const publisherName = book.publisher_rel ? book.publisher_rel.name : "N/A";
+    const publisherCity = book.publisher_rel ? book.publisher_rel.city : "N/A";
+
+    // Авторы
+    let authorsText = "N/A";
+    if (book.authors && book.authors.length > 0) {
+      authorsText = book.authors
+        .map(
+          (a) =>
+            `${a.last_name} ${a.first_name}${a.middle_name ? " " + a.middle_name : ""}`
+        )
+        .join(", ");
+    }
+
     const li = document.createElement("li");
     li.innerHTML = `
       <strong>Title:</strong> ${book.title || "N/A"} <br>
-      <strong>Authors:</strong> ${
-        book.authors && book.authors.length > 0
-          ? book.authors
-              .map(
-                (a) => 
-                  `${a.last_name} ${a.first_name}${a.middle_name ? " " + a.middle_name : ""}`
-              )
-              .join(", ")
-          : "N/A"
-      } <br>
-      <strong>Publisher:</strong> ${book.publisher || "N/A"} <br>
-      <strong>Publication City:</strong> ${book.publication_city || "N/A"} <br>
-      <strong>Year:</strong> ${book.publication_year || "N/A"} <br>
-      <strong>Pages:</strong> ${book.page_count || "N/A"} <br>
+      <strong>Authors:</strong> ${authorsText} <br>
+      <strong>Publisher:</strong> ${publisherName} <br>
+      <strong>City:</strong> ${publisherCity} <br>
+      <strong>Year:</strong> ${book.publication_year ?? "N/A"} <br>
+      <strong>Pages:</strong> ${book.page_count ?? "N/A"} <br>
       <strong>Additional Info:</strong> ${book.additional_info || "N/A"} <br>
       <strong>Download Link:</strong> ${
-        book.download_link 
+        book.download_link
           ? `<a href="${book.download_link}" target="_blank">${book.download_link}</a>`
           : "N/A"
       } <br>
@@ -253,7 +278,7 @@ function displayBooks(books) {
 }
 
 /**
- * Сортировка (как раньше)
+ * Сортировка
  */
 function applySort() {
   const sortType = document.getElementById("sort-type").value;
@@ -269,17 +294,19 @@ function applySort() {
       sorted.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
       break;
     case "authors":
+      // Сортируем по фамилии первого автора
       sorted.sort((a, b) => {
-        const aAuthor = (a.authors && a.authors[0]) 
-          ? a.authors[0].last_name.toLowerCase() 
+        const aAuthor = (a.authors && a.authors[0])
+          ? a.authors[0].last_name.toLowerCase()
           : "";
-        const bAuthor = (b.authors && b.authors[0]) 
-          ? b.authors[0].last_name.toLowerCase() 
+        const bAuthor = (b.authors && b.authors[0])
+          ? b.authors[0].last_name.toLowerCase()
           : "";
         return aAuthor.localeCompare(bAuthor);
       });
       break;
     case "publication_year":
+      // По убыванию
       sorted.sort((a, b) => (b.publication_year || 0) - (a.publication_year || 0));
       break;
     case "teacher":

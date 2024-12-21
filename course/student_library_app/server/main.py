@@ -1,41 +1,37 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from passlib.context import CryptContext
+from jose import jwt, JWTError
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session, joinedload
+from typing import List
 from database import SessionLocal, engine
 import models
 import schemas
-from passlib.context import CryptContext
-from jose import JWTError, jwt
-from datetime import datetime, timedelta
 
-# Создание экземпляра приложения
-app = FastAPI()
-
-# Создание таблиц в базе данных
-models.Base.metadata.create_all(bind=engine)
-
-# Настройка CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Указать конкретные источники в продакшене
-    allow_credentials=True,
-    allow_methods=["*"],  # Разрешить все методы (GET, POST, PUT, DELETE)
-    allow_headers=["*"],  # Разрешить все заголовки
-)
-
-# Настройка bcrypt для хэширования паролей
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# Конфигурация JWT
-SECRET_KEY = "your_secret_key"  # Замените на более надёжный ключ
+SECRET_KEY = "your_secret_key"  # Поменяйте на более надежный
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# OAuth2 схема для получения токена
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-# Зависимость для получения сессии базы данных
+app = FastAPI()
+
+# Создаём таблицы (если их нет)
+models.Base.metadata.create_all(bind=engine)
+
+# Настройка CORS (если нужно)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 def get_db():
     db = SessionLocal()
     try:
@@ -43,14 +39,15 @@ def get_db():
     finally:
         db.close()
 
-# Функция для создания JWT-токена
+
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
 
-# Функция для проверки токена и получения текущего пользователя
+
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -64,61 +61,97 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-# Регистрация пользователя
+
 @app.post("/register/", response_model=schemas.UserResponse)
-def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.username == user.username).first()
-    if db_user:
+def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
+    # Проверяем, что пользователя с таким именем нет
+    existing_user = db.query(models.User).filter(models.User.username == user_data.username).first()
+    if existing_user:
         raise HTTPException(status_code=400, detail="Username already registered")
-    if user.role not in ["teacher", "student"]:
-        raise HTTPException(status_code=400, detail="Invalid role. Choose 'teacher' or 'student'.")
-    hashed_password = pwd_context.hash(user.password)
-    new_user = models.User(username=user.username, hashed_password=hashed_password, role=user.role)
+
+    # Ищем или создаём роль
+    role_name = user_data.role  # "teacher", "student", "admin" и т.д.
+    role_obj = db.query(models.Role).filter(models.Role.name == role_name).first()
+    if not role_obj:
+        role_obj = models.Role(name=role_name)
+        db.add(role_obj)
+        db.flush()
+
+    hashed_password = pwd_context.hash(user_data.password)
+    new_user = models.User(
+        username=user_data.username,
+        hashed_password=hashed_password,
+        role_id=role_obj.id
+    )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
     return new_user
 
-# Аутентификация пользователя
+
 @app.post("/login/")
 def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.username == form_data.username).first()
     if not user or not pwd_context.verify(form_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub": user.username}, expires_delta=access_token_expires)
-    return {"access_token": access_token, "token_type": "bearer", "role": user.role}
 
-# Добавление книги
+    # Пример: возвращаем и роль (строкой), извлекая её из связанного Role
+    role_name = user.role_rel.name if user.role_rel else None
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "role": role_name
+    }
+
+
 @app.post("/books/", response_model=schemas.BookResponse)
-def create_book(book: schemas.BookCreate, db: Session = Depends(get_db), current_user: schemas.User = Depends(get_current_user)):
-    # Создаём книгу без авторов
+def create_book(
+    book_data: schemas.BookCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    # "Get or create" publisher (если указан)
+    publisher_id = None
+    if book_data.publisher:
+        existing_publisher = db.query(models.Publisher).filter_by(
+            name=book_data.publisher.name,
+            city=book_data.publisher.city
+        ).first()
+        if existing_publisher:
+            publisher_id = existing_publisher.id
+        else:
+            new_publisher = models.Publisher(
+                name=book_data.publisher.name,
+                city=book_data.publisher.city
+            )
+            db.add(new_publisher)
+            db.flush()
+            publisher_id = new_publisher.id
+
+    # Создаём книгу
     db_book = models.Book(
-        title=book.title,
-        download_link=book.download_link,
-        publication_city=book.publication_city,
-        publisher=book.publisher,
-        publication_year=book.publication_year,
-        page_count=book.page_count,
-        additional_info=book.additional_info,
-        owner_id=current_user.id
+        title=book_data.title,
+        download_link=book_data.download_link,
+        publication_year=book_data.publication_year,
+        page_count=book_data.page_count,
+        additional_info=book_data.additional_info,
+        owner_id=current_user.id,
+        publisher_id=publisher_id
     )
-
-    # Добавляем книгу в базу данных
     db.add(db_book)
-    db.commit()
-    db.refresh(db_book)
+    db.flush()
 
-    # Добавляем авторов и связываем их с книгой
-    for author_data in book.authors:
-        # Проверяем, существует ли автор в базе данных
+    # Привязка авторов
+    for author_data in book_data.authors:
         db_author = db.query(models.Author).filter_by(
             first_name=author_data.first_name,
             last_name=author_data.last_name,
             middle_name=author_data.middle_name
         ).first()
-
-        # Если автор не существует, создаём нового
         if not db_author:
             db_author = models.Author(
                 first_name=author_data.first_name,
@@ -126,57 +159,82 @@ def create_book(book: schemas.BookCreate, db: Session = Depends(get_db), current
                 middle_name=author_data.middle_name
             )
             db.add(db_author)
-            db.flush()  # Используем flush(), чтобы получить id нового автора до commit
+            db.flush()
 
-        # Создаём связь между книгой и автором
         book_author = models.BookAuthor(book_id=db_book.id, author_id=db_author.id)
         db.add(book_author)
 
-    # Один раз коммитим все изменения
     db.commit()
     db.refresh(db_book)
-
     return db_book
 
 
+@app.get("/books/", response_model=List[schemas.BookResponse])
+def get_books(db: Session = Depends(get_db)):
+    # Подгружаем связанные модели
+    books = (
+        db.query(models.Book)
+        .options(
+            joinedload(models.Book.book_authors).joinedload(models.BookAuthor.author),
+            joinedload(models.Book.publisher_rel),
+            joinedload(models.Book.owner)
+        )
+        .all()
+    )
 
-
-# Получение всех книг или с фильтрацией
-@app.get("/books/", response_model=list[schemas.BookResponse])
-def get_books(
-    author: str | None = Query(None),
-    title: str | None = Query(None),
-    db: Session = Depends(get_db)
-):
-    # Подгружаем информацию о владельце книги
-    books = db.query(models.Book).options(joinedload(models.Book.book_authors).joinedload(models.BookAuthor.author)).all()
-
-
-    # Формируем результат с owner_username
     result = []
     for book in books:
-        authors = [
-            {"id": ba.author.id, "first_name": ba.author.first_name, "last_name": ba.author.last_name, "middle_name": ba.author.middle_name}
-            for ba in book.book_authors
-        ]
-        book_data = {
-            **book.__dict__,
+        # Формируем список авторов
+        authors_list = []
+        for ba in book.book_authors:
+            if ba.author:
+                authors_list.append({
+                    "id": ba.author.id,
+                    "first_name": ba.author.first_name,
+                    "last_name": ba.author.last_name,
+                    "middle_name": ba.author.middle_name
+                })
+        
+        # Готовим publisher
+        publisher_data = None
+        if book.publisher_rel:
+            publisher_data = {
+                "id": book.publisher_rel.id,
+                "name": book.publisher_rel.name,
+                "city": book.publisher_rel.city
+            }
+
+        # Собираем итоговый объект
+        book_dict = {
+            "id": book.id,
+            "title": book.title,
+            "download_link": book.download_link,
+            "publication_year": book.publication_year,
+            "page_count": book.page_count,
+            "additional_info": book.additional_info,
+            "owner_id": book.owner_id,
             "owner_username": book.owner.username if book.owner else None,
-            "authors": authors
+            "publisher_rel": publisher_data,
+            "authors": authors_list
         }
-        result.append(book_data)
+        result.append(book_dict)
 
     return result
 
-
-# Удаление книги
 @app.delete("/books/{book_id}")
-def delete_book(book_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def delete_book(
+    book_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     db_book = db.query(models.Book).filter(models.Book.id == book_id).first()
     if not db_book:
         raise HTTPException(status_code=404, detail="Book not found")
+
+    # Проверяем, что только владелец может удалить
     if db_book.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to delete this book")
+
     db.delete(db_book)
     db.commit()
     return {"detail": "Book deleted successfully"}
