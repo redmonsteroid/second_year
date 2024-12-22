@@ -1,20 +1,25 @@
-# Используем базовый образ Python
+# Используем минимальный базовый образ
 FROM python:3.11
 
-# Устанавливаем рабочую директорию
+# Установка зависимостей
+RUN apt-get update && apt-get install -y libpq-dev && rm -rf /var/lib/apt/lists/*
+
+# Установка рабочей директории
 WORKDIR /app
 
-# Копируем файл зависимостей
-COPY requirements.txt .
+# Копирование файлов приложения
+COPY . /app
 
-# Устанавливаем зависимости
+# Установка Python-зависимостей
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем все файлы приложения
-COPY . .
+# Создание пользователя tester
+ARG UID=100001
+ARG GID=100001
+RUN groupadd -g $GID tester && useradd -u $UID -g $GID -m tester
 
-# Указываем порт, который будет использовать приложение
-EXPOSE 8000
+# Переключение на пользователя tester
+USER tester
 
-# Команда для запуска приложения
+# Команда запуска
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

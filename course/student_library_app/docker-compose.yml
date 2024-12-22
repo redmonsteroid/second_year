@@ -34,7 +34,7 @@ services:
   client:
     build: ./client
     ports:
-      - "3001:3001"  # Изменённый внешний порт
+      - "3001:3001"  
     volumes:
       - ./client:/app
     depends_on:
@@ -56,3 +56,5 @@ services:
 volumes:
   postgres_data:
   grafana_data:
+
+

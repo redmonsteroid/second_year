@@ -9,6 +9,10 @@ from typing import List
 from database import SessionLocal, engine
 import models
 import schemas
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 SECRET_KEY = "your_secret_key"  # Поменяйте на более надежный
 ALGORITHM = "HS256"
@@ -60,6 +64,18 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         return user
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+@app.on_event("startup")
+def startup_event():
+    logger.info("Application started.")
+
+@app.on_event("shutdown")
+def shutdown_event():
+    logger.info("Application stopped.")
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
 
 
 @app.post("/register/", response_model=schemas.UserResponse)
