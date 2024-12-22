@@ -1,4 +1,16 @@
+let editingBookId = null;  // Глобальная переменная для режима редактирования
+let teacherBooks = [];     // Храним список книг учителя, чтобы найти нужную по ID
+
 document.addEventListener("DOMContentLoaded", () => {
+  // Проверка роли
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+  if (!token || role !== "teacher") {
+    alert("Access denied. You are not a teacher.");
+    window.location.href = "../pages/library.html";
+    return;
+  }
+
   console.log("Teacher panel loaded...");
   loadBooks();
 
@@ -9,18 +21,11 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ---------------- Валидация и вспомогательные функции ---------------- */
-
-/**
- * Если строка состоит только из пробелов / пуста, заменяем на "N/A".
- */
 function sanitizeOrNA(value) {
   const trimmed = value.trim();
   return trimmed === "" ? "N/A" : trimmed;
 }
 
-/**
- * Проверка обязательного поля (название книги)
- */
 function validateRequired(value, fieldName) {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -29,11 +34,6 @@ function validateRequired(value, fieldName) {
   return "";
 }
 
-/**
- * Проверка года публикации:
- * - Может быть пустым => null
- * - Если заполнен => 4 цифры, от 0 до 2025
- */
 function validatePublicationYear(value) {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -52,11 +52,10 @@ function validatePublicationYear(value) {
   return { year: parsed, error: "" };
 }
 
-/* ---------------- Обработка формы добавления книги ---------------- */
+/* ---------------- Добавление / Редактирование книги ---------------- */
 
 async function handleAddBook(event) {
   event.preventDefault();
-
   clearAllErrors();
 
   const token = localStorage.getItem("token");
@@ -68,31 +67,33 @@ async function handleAddBook(event) {
   // Собираем значения из полей
   const titleVal = document.getElementById("book-title").value;
   const downloadVal = document.getElementById("book-download-link").value;
-  const cityVal = document.getElementById("book-publication-city").value;     // <-- город издательства
-  const publisherVal = document.getElementById("book-publisher").value;      // <-- название издательства
+  const cityVal = document.getElementById("book-publication-city").value;
+  const publisherVal = document.getElementById("book-publisher").value;
   const yearVal = document.getElementById("book-publication-year").value;
   const pageCountVal = document.getElementById("book-page-count").value;
   const additionalInfoVal = document.getElementById("book-additional-info").value;
 
-  // Проверяем обязательное поле: Title
+  // Валидация
   const titleError = validateRequired(titleVal, "Book Title");
   if (titleError) {
     showError("book-title-error", titleError);
   }
-
-  // Проверяем год
   const { year, error: yearError } = validatePublicationYear(yearVal);
   if (yearError) {
     showError("book-publication-year-error", yearError);
   }
 
-  // Остальные поля могут быть пусты => "N/A"
+  if (titleError || yearError) {
+    console.log("Validation failed. Title error:", titleError, "Year error:", yearError);
+    return;
+  }
+
+  // Сбор остальных полей
   const finalDownloadLink = sanitizeOrNA(downloadVal);
   const finalCity = sanitizeOrNA(cityVal);
   const finalPublisher = sanitizeOrNA(publisherVal);
   const finalAdditionalInfo = sanitizeOrNA(additionalInfoVal);
 
-  // Парсим количество страниц (необязательно)
   let finalPageCount = null;
   const pageTrim = pageCountVal.trim();
   if (pageTrim !== "") {
@@ -102,7 +103,7 @@ async function handleAddBook(event) {
     }
   }
 
-  // Обработка авторов
+  // Авторы
   const authors = getAuthors();
   authors.forEach((author) => {
     author.last_name = sanitizeOrNA(author.last_name);
@@ -110,31 +111,30 @@ async function handleAddBook(event) {
     author.middle_name = sanitizeOrNA(author.middle_name);
   });
 
-  // Если есть ошибки => прерываем
-  if (titleError || yearError) {
-    console.log("Validation failed. Title error:", titleError, "Year error:", yearError);
-    return;
-  }
-
-  // Формируем объект для POST /books/
-  // Обратите внимание: bэкенду теперь нужен publisher: { name, city },
-  // а не просто publisher / publication_city
+  // Формируем данные для POST /books
   const newBookData = {
     title: titleVal.trim(),
     download_link: finalDownloadLink,
-    publication_year: year,            // либо null
+    publication_year: year,  // либо null
     page_count: finalPageCount,
     additional_info: finalAdditionalInfo,
-    authors: authors,
+    authors,
     publisher: {
       name: finalPublisher,
       city: finalCity
     }
   };
 
-  console.log("Submitting new book with data:", newBookData);
+  console.log("Submitting book data:", newBookData, "editingBookId:", editingBookId);
 
   try {
+    // Если мы редактируем (editingBookId != null), удаляем старую книгу
+    if (editingBookId !== null) {
+      await deleteBook(editingBookId, /*silent=*/true);
+      // silent=true означает, что мы не будем перезагружать список сразу
+    }
+
+    // Теперь создаём книгу
     const response = await fetch("http://127.0.0.1:8000/books/", {
       method: "POST",
       headers: {
@@ -148,17 +148,98 @@ async function handleAddBook(event) {
       throw new Error("Failed to add book");
     }
 
-    console.log("Book added successfully!");
+    console.log(editingBookId !== null
+      ? "Book updated (delete + add) successfully!"
+      : "Book added successfully!"
+    );
+
+    // Очищаем форму
     document.getElementById("add-book-form").reset();
-    loadBooks();
+
+    // Сброс режима редактирования
+    editingBookId = null;
+    const addBtn = document.querySelector(".add-book-btn");
+    if (addBtn) {
+      addBtn.textContent = "Add Book"; // Возвращаем текст кнопки
+    }
+
+    // Обновляем список
+    await loadBooks();
   } catch (error) {
     console.error(error);
-    alert("Error adding book");
+    alert("Error adding/updating book");
   }
 }
 
-/* ---------------- Функции работы с ошибками ---------------- */
+/* ---------------- Функция editBook(bookId) ---------------- */
+// Вызывается при нажатии на кнопку "Edit"
+function editBook(bookId) {
+  // Находим книгу в teacherBooks
+  const book = teacherBooks.find(b => b.id === bookId);
+  if (!book) {
+    console.error("Book not found:", bookId);
+    return;
+  }
 
+  console.log("Editing book:", book);
+
+  // Заполняем поля формы
+  document.getElementById("book-title").value = book.title || "";
+  document.getElementById("book-download-link").value = book.download_link || "";
+  document.getElementById("book-publication-year").value = book.publication_year || "";
+  document.getElementById("book-page-count").value = book.page_count || "";
+  document.getElementById("book-additional-info").value = book.additional_info || "";
+
+  // Если есть publisher_rel => это означает, что на бэкенде есть publisher_rel.name/city
+  if (book.publisher_rel) {
+    document.getElementById("book-publisher").value = book.publisher_rel.name || "";
+    document.getElementById("book-publication-city").value = book.publisher_rel.city || "";
+  } else {
+    document.getElementById("book-publisher").value = "";
+    document.getElementById("book-publication-city").value = "";
+  }
+
+  // Авторы
+  // Сначала очищаем блок authors-container
+  const container = document.getElementById("authors-container");
+  container.innerHTML = ""; // убираем все поля
+  if (book.authors && book.authors.length > 0) {
+    book.authors.forEach((a) => {
+      const div = document.createElement("div");
+      div.classList.add("author-entry");
+      div.innerHTML = `
+        <div class="input-group">
+          <input type="text" class="author-last-name" placeholder="Last Name" value="${a.last_name || ""}">
+          <span class="error-message author-error"></span>
+        </div>
+        <div class="input-group">
+          <input type="text" class="author-first-name" placeholder="First Name" value="${a.first_name || ""}">
+          <span class="error-message author-error"></span>
+        </div>
+        <div class="input-group">
+          <input type="text" class="author-middle-name" placeholder="Middle Name" value="${a.middle_name || ""}">
+          <span class="error-message author-error"></span>
+        </div>
+        <button type="button" class="remove-author-btn" onclick="removeAuthorField(this)">Remove</button>
+      `;
+      container.appendChild(div);
+    });
+  } else {
+    // Если нет авторов, добавляем одну пустую запись
+    addAuthorField();
+  }
+
+  // Включаем режим редактирования
+  editingBookId = bookId;
+
+  // Меняем текст кнопки на форме
+  const addBtn = document.querySelector(".add-book-btn");
+  if (addBtn) {
+    addBtn.textContent = "Save Changes";
+  }
+}
+
+/* ---------------- Очистка ошибок ---------------- */
 function clearAllErrors() {
   const errorSpans = document.querySelectorAll(".error-message");
   errorSpans.forEach(span => {
@@ -166,15 +247,7 @@ function clearAllErrors() {
   });
 }
 
-function showError(spanId, message) {
-  const span = document.getElementById(spanId);
-  if (span) {
-    span.textContent = message;
-  }
-}
-
-/* ---------------- Логика с авторами ---------------- */
-
+/* ---------------- Авторы ---------------- */
 function addAuthorField() {
   const container = document.getElementById("authors-container");
   const div = document.createElement("div");
@@ -212,7 +285,7 @@ function getAuthors() {
   });
 }
 
-/* ---------------- Загрузка и отображение книг учителя ---------------- */
+/* ---------------- Загрузка и отображение книг (teacherBooks) ---------------- */
 
 async function loadBooks() {
   const token = localStorage.getItem("token");
@@ -233,38 +306,33 @@ async function loadBooks() {
       throw new Error("Failed to load books");
     }
 
-    const books = await response.json();
-    console.log("Books received from server:", books);
+    const allBooks = await response.json();
+    console.log("Books received from server:", allBooks);
 
-    displayBooks(books);
+    // Фильтруем только книги текущего учителя
+    const currentUsername = localStorage.getItem("username");
+    teacherBooks = allBooks.filter(book => book.owner_username === currentUsername);
+
+    displayBooks(teacherBooks);
   } catch (error) {
     console.error(error);
     alert("Error loading books");
   }
 }
 
-function displayBooks(allBooks) {
+/**
+ * Выводим teacherBooks
+ * Добавляем кнопку "Edit" наряду с кнопкой "Delete"
+ */
+function displayBooks(books) {
   const bookList = document.getElementById("book-list");
   if (!bookList) return;
   bookList.innerHTML = "";
 
-  const currentUsername = localStorage.getItem("username");
-  console.log("currentUsername from localStorage:", currentUsername);
-
-  // Оставляем только книги текущего учителя
-  const teacherBooks = allBooks.filter(book => {
-    console.log(`Book ID: ${book.id}, Title: ${book.title}, OwnerUsername: ${book.owner_username}`);
-    return book.owner_username === currentUsername;
-  });
-
-  console.log("Filtered teacherBooks:", teacherBooks);
-
-  teacherBooks.forEach(book => {
-    // Издательство и город теперь внутри book.publisher_rel
+  books.forEach((book) => {
     const publisherName = book.publisher_rel ? book.publisher_rel.name : "N/A";
     const publisherCity = book.publisher_rel ? book.publisher_rel.city : "N/A";
 
-    // Формируем строку с авторами
     let authorsText = "N/A";
     if (book.authors && book.authors.length > 0) {
       authorsText = book.authors
@@ -288,14 +356,17 @@ function displayBooks(allBooks) {
           ? `<a href="${book.download_link}" target="_blank">${book.download_link}</a>`
           : "N/A"
       } <br>
+
+      <!-- Кнопки Edit и Delete -->
+      <button class="edit-btn" onclick="editBook(${book.id})">Edit</button>
       <button class="delete-btn" onclick="deleteBook(${book.id})">Delete</button>
     `;
     bookList.appendChild(li);
   });
 }
 
-/* ---------------- Удаление книги (только своих) ---------------- */
-async function deleteBook(bookId) {
+/* ---------------- Удаление книги (silent или нет) ---------------- */
+async function deleteBook(bookId, silent = false) {
   const token = localStorage.getItem("token");
   if (!token) {
     alert("Unauthorized. Please login.");
@@ -316,7 +387,11 @@ async function deleteBook(bookId) {
     }
 
     console.log("Book deleted successfully:", bookId);
-    loadBooks();
+
+    if (!silent) {
+      // Если не в режиме редактирования, перезагружаем список
+      await loadBooks();
+    }
   } catch (error) {
     console.error(error);
     alert("Error deleting book");
@@ -327,6 +402,7 @@ async function deleteBook(bookId) {
 function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("username");
+  localStorage.removeItem("role");
   console.log("Logged out. Redirecting to login...");
   window.location.href = "login.html";
 }

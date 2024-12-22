@@ -288,6 +288,22 @@ body.dark-mode #book-list li {
   background-color: #b52f2b;
 }
 
+.edit-btn {
+  margin-top: 0.5rem;
+  background-color: #ffc107;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+  margin-right: 0.5rem; /* чтобы отделить от кнопки Delete */
+}
+.edit-btn:hover {
+  background-color: #e0a800; /* чуть темнее */
+}
+
 /* ----------------------------
    Адаптивность
 ----------------------------- */
