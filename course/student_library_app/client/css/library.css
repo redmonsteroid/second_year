@@ -354,6 +354,44 @@ body.dark-mode #book-list li {
   color: #4a90e2;
 }
 
+/* Стили для контейнера ссылки и кнопки копирования */
+.link-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.link-container a {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #007BFF;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.link-container a:hover {
+  text-decoration: underline;
+}
+
+.copy-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #007BFF;
+  font-size: 1rem;
+  padding: 0;
+}
+
+.copy-btn:hover {
+  color: #0056b3;
+}
+
+.copy-btn i {
+  pointer-events: none; /* Иконка не реагирует на клики, клики обрабатываются родительским элементом */
+}
+
 /* Адаптивность */
 @media (max-width: 768px) {
   header {

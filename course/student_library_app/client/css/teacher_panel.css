@@ -226,6 +226,40 @@ body.dark-mode .book-card {
   background-color: #b52f2b;
 }
 
+/* Стили для контейнера ссылки и кнопки копирования */
+.link-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.link-container a {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #007BFF;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.link-container a:hover {
+  text-decoration: underline;
+}
+
+.copy-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #007BFF;
+  font-size: 1rem;
+  padding: 0;
+}
+
+.copy-btn:hover {
+  color: #0056b3;
+}
+
 /* Модальное окно */
 .modal {
   position: fixed;
@@ -322,8 +356,6 @@ body.dark-mode .modal-content {
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
-
-
 /* Анимация появления/исчезания */
 @keyframes fadeInOut {
   0% {opacity: 0; transform: translateY(-10px);}
@@ -337,4 +369,23 @@ body.dark-mode .modal-content {
   .book-cards {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
+  
+  .modal-content {
+    width: 90%;
+  }
+  
+  .search-books {
+    width: 100%;
+    margin-top: 1rem;
+  }
+  
+  .top-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* Дополнительные стили для кнопки "Копировать" внутри карточки */
+.copy-btn i {
+  pointer-events: none; /* Иконка не реагирует на клики, клики обрабатываются родительским элементом */
 }

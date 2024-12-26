@@ -1,8 +1,9 @@
-let editingBookId = null;  // Глобальная переменная для режима редактирования
+// Глобальные переменные
+let editingBookId = null;  // Идентификатор книги в режиме редактирования
 let teacherBooks = [];     // Все книги учителя
-let filteredBooks = [];    // Отфильтрованные по поиску (если есть)
+let filteredBooks = [];    // Отфильтрованные книги (при поиске)
 
-// При загрузке проверяем роль, грузим книги
+// При загрузке документа выполняем начальную настройку
 document.addEventListener("DOMContentLoaded", () => {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
@@ -14,19 +15,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadBooks();
 
-  // Слушаем сабмит формы в модале
+  // Обработчик отправки формы добавления/редактирования книги
   const bookForm = document.getElementById("book-form");
   if (bookForm) {
     bookForm.addEventListener("submit", handleBookFormSubmit);
   }
+
+  // Обработчик клика вне модального окна для его закрытия
+  const modal = document.getElementById("book-modal");
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        hideModal();
+      }
+    });
+  }
 });
 
+// Функция переключения темы (светлая/тёмная) уже определена в main.js
+// Поэтому здесь её не нужно определять снова
 
-function sanitizeOrNA(value) {
-  const trimmed = value.trim();
-  return trimmed === "" ? "N/A" : trimmed;
-}
-
+// Функции валидации
 function validateRequired(value, fieldName) {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -53,8 +62,7 @@ function validatePublicationYear(value) {
   return { year: parsed, error: "" };
 }
 
-/* -------------- BOOK LOGIC -------------- */
-
+// Функция загрузки книг с сервера
 async function loadBooks() {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -73,7 +81,7 @@ async function loadBooks() {
     const currentUsername = localStorage.getItem("username");
     teacherBooks = allBooks.filter(book => book.owner_username === currentUsername);
 
-    // По умолчанию нет фильтра поиска, так что покажем все
+    // По умолчанию отображаем все книги
     filteredBooks = [...teacherBooks];
     renderBooks(filteredBooks);
   } catch (error) {
@@ -82,9 +90,7 @@ async function loadBooks() {
   }
 }
 
-/**
- * Отображение книг в карточках
- */
+// Функция отображения книг в карточках
 function renderBooks(booksArr) {
   const bookCards = document.getElementById("book-cards");
   if (!bookCards) return;
@@ -97,24 +103,27 @@ function renderBooks(booksArr) {
     let authorsText = "N/A";
     if (book.authors && book.authors.length > 0) {
       authorsText = book.authors
-        .map(a => `${a.last_name} ${a.first_name}${a.middle_name ? " " + a.middle_name : ""}`)
+        .map(a => `${sanitizeHTML(a.last_name)} ${sanitizeHTML(a.first_name)}${a.middle_name ? " " + sanitizeHTML(a.middle_name) : ""}`)
         .join(", ");
     }
 
     const card = document.createElement("div");
     card.classList.add("book-card");
     card.innerHTML = `
-      <h4>${book.title || "N/A"}</h4>
+      <h4>${sanitizeHTML(book.title) || "N/A"}</h4>
       <p><strong>Authors:</strong> ${authorsText}</p>
-      <p><strong>Publisher:</strong> ${publisherName}, <strong>City:</strong> ${publisherCity}</p>
+      <p><strong>Publisher:</strong> ${sanitizeHTML(publisherName)}, <strong>City:</strong> ${sanitizeHTML(publisherCity)}</p>
       <p><strong>Year:</strong> ${book.publication_year ?? "N/A"}</p>
       <p><strong>Pages:</strong> ${book.page_count ?? "N/A"}</p>
       <p><strong>Link:</strong> ${
         book.download_link
-          ? `<a href="${book.download_link}" target="_blank">${book.download_link}</a>`
+          ? `<div class="link-container">
+               <a href="${sanitizeAttribute(book.download_link)}" target="_blank" title="${sanitizeAttribute(book.download_link)}">${sanitizeText(book.download_link)}</a>
+               <button class="copy-btn" onclick="copyToClipboard('${sanitizeJS(book.download_link)}')"><i class="fas fa-copy"></i></button>
+             </div>`
           : "N/A"
       }</p>
-      <p><strong>Info:</strong> ${book.additional_info || "N/A"}</p>
+      <p><strong>Info:</strong> ${sanitizeHTML(book.additional_info) || "N/A"}</p>
       <div class="book-actions">
         <button class="edit-btn" onclick="editBook(${book.id})">Edit</button>
         <button class="delete-btn" onclick="deleteBook(${book.id})">Delete</button>
@@ -124,14 +133,44 @@ function renderBooks(booksArr) {
   });
 }
 
-/* ---------- SEARCH (filter) ---------- */
+// Функции для санитизации данных
+function sanitizeHTML(str) {
+  if (!str) return "";
+  return str.replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+}
+
+function sanitizeAttribute(str) {
+  if (!str) return "";
+  return str.replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+function sanitizeText(str) {
+  if (!str) return "";
+  // Ограничим количество символов для отображения
+  const maxLength = 50;
+  if (str.length > maxLength) {
+    return str.substring(0, maxLength) + '...';
+  }
+  return str;
+}
+
+function sanitizeJS(str) {
+  if (!str) return "";
+  return str.replace(/'/g, "\\'");
+}
+
+// Функция поиска книг учителя
 function searchTeacherBooks(searchVal) {
   const val = searchVal.trim().toLowerCase();
   filteredBooks = teacherBooks.filter(b => {
-    // Проверяем title, authors, publisher, city, etc.
+    // Проверяем title, authors, publisher, city и т.д.
     const title = b.title ? b.title.toLowerCase() : "";
     const authors = b.authors
-      ? b.authors.map(a => (a.last_name + " " + a.first_name + (a.middle_name||"")).toLowerCase()).join(" ")
+      ? b.authors.map(a => (a.last_name + " " + a.first_name + (a.middle_name || "")).toLowerCase()).join(" ")
       : "";
     const publisher = (b.publisher_rel && b.publisher_rel.name) ? b.publisher_rel.name.toLowerCase() : "";
     const city = (b.publisher_rel && b.publisher_rel.city) ? b.publisher_rel.city.toLowerCase() : "";
@@ -146,11 +185,7 @@ function searchTeacherBooks(searchVal) {
   renderBooks(filteredBooks);
 }
 
-/* ---------- ADD / EDIT BOOK (modal) ---------- */
-
-/** 
- * Открыть модал для добавления новой книги 
- */
+// Функции для открытия и закрытия модального окна
 function openBookModal() {
   editingBookId = null;
   resetBookForm();
@@ -158,16 +193,11 @@ function openBookModal() {
   showModal();
 }
 
-/**
- * Закрыть модал
- */
 function closeBookModal() {
   hideModal();
 }
 
-/**
- * Очистить форму
- */
+// Функция очистки формы и добавления поля для автора
 function resetBookForm() {
   document.getElementById("editing-book-id").value = "";
   document.getElementById("book-title").value = "";
@@ -186,12 +216,7 @@ function resetBookForm() {
   clearAllErrors();
 }
 
-/**
- * Обработчик сабмита формы (Add/Edit)
- */
-/**
- * Обработчик сабмита формы (Add/Edit)
- */
+// Обработчик отправки формы (добавление/редактирование книги)
 async function handleBookFormSubmit(e) {
   e.preventDefault();
   clearAllErrors();
@@ -202,102 +227,121 @@ async function handleBookFormSubmit(e) {
     return;
   }
 
-  // Собираем данные из формы
+  // Получаем значения из формы
   const titleVal = document.getElementById("book-title").value;
-  const downloadVal = document.getElementById("book-download-link").value;
-  const cityVal = document.getElementById("book-publication-city").value;
+  const downloadLinkVal = document.getElementById("book-download-link").value;
+  const publicationCityVal = document.getElementById("book-publication-city").value;
   const publisherVal = document.getElementById("book-publisher").value;
   const yearVal = document.getElementById("book-publication-year").value;
   const pageCountVal = document.getElementById("book-page-count").value;
   const additionalInfoVal = document.getElementById("book-additional-info").value;
-
-  // Проверка обязательных полей
-  const titleError = validateRequired(titleVal, "Book Title");
-  const { year, error: yearError } = validatePublicationYear(yearVal);
-
-  if (titleError) showError("book-title-error", titleError);
-  if (yearError) showError("book-publication-year-error", yearError);
-
-  // Если есть ошибки, прекращаем выполнение
-  if (titleError || yearError) return;
-
-  // Обработка авторов
   const authors = getAuthors();
-  authors.forEach(author => {
-    author.last_name = sanitizeOrNA(author.last_name);
-    author.first_name = sanitizeOrNA(author.first_name);
-  });
 
-  // Парсим количество страниц
-  const finalPageCount = pageCountVal.trim() !== "" ? parseInt(pageCountVal.trim(), 10) : null;
+  // Валидация полей
+  let hasError = false;
+  const titleError = validateRequired(titleVal, "Book Title");
+  if (titleError) {
+    showError("book-title-error", titleError);
+    hasError = true;
+  }
 
-  // Формируем данные для отправки
-  const newBookData = {
+  const { year, error: yearError } = validatePublicationYear(yearVal);
+  if (yearError) {
+    showError("book-publication-year-error", yearError);
+    hasError = true;
+  }
+
+  // Валидация издателя (можно добавить дополнительные проверки)
+  // Например, если издательство обязательно, раскомментируйте следующий код
+  /*
+  if (!publisherVal.trim()) {
+    showError("book-publisher-error", "Publisher cannot be empty.");
+    hasError = true;
+  }
+  */
+
+  if (hasError) {
+    console.log("Validation failed.");
+    return;
+  }
+
+  // Формируем объект publisher
+  let publisherObj = null;
+  if (publisherVal.trim() || publicationCityVal.trim()) {
+    publisherObj = {
+      name: publisherVal.trim() || null,
+      city: publicationCityVal.trim() || null
+    };
+  }
+
+  // Сбор данных для добавления или редактирования книги
+  const bookData = {
     title: titleVal.trim(),
-    download_link: sanitizeOrNA(downloadVal),
-    publication_year: year,
-    page_count: finalPageCount,
-    additional_info: sanitizeOrNA(additionalInfoVal),
-    authors: authors,
-    publisher: {
-      name: sanitizeOrNA(publisherVal),
-      city: sanitizeOrNA(cityVal),
-    },
+    download_link: downloadLinkVal.trim() || null,
+    publisher: publisherObj, // Объект с полями name и city
+    publication_year: year, // Уже валидирован
+    page_count: pageCountVal ? parseInt(pageCountVal, 10) : null,
+    additional_info: additionalInfoVal.trim() || null,
+    authors: authors
   };
 
   try {
-    // Если редактирование
     if (editingBookId) {
-      // Удаляем старую книгу
-      await deleteBook(editingBookId, true);
+      // Режим редактирования: сначала удаляем старую книгу
+      const deleteResponse = await fetch(`http://127.0.0.1:8000/books/${editingBookId}/`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      // Добавляем новую книгу
-      const response = await fetch("http://127.0.0.1:8000/books/", {
+      if (!deleteResponse.ok) {
+        throw new Error("Failed to delete the old book for editing");
+      }
+
+      // Затем добавляем новую книгу с обновлёнными данными
+      const addResponse = await fetch("http://127.0.0.1:8000/books/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(newBookData),
+        body: JSON.stringify(bookData),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to save book");
+      if (!addResponse.ok) {
+        const errorData = await addResponse.json();
+        throw new Error(`Failed to add the updated book: ${JSON.stringify(errorData)}`);
       }
 
       showToast("Book updated successfully!", "success");
     } else {
-      // Если добавление новой книги
+      // Режим добавления
       const response = await fetch("http://127.0.0.1:8000/books/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(newBookData),
+        body: JSON.stringify(bookData),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save book");
+        const errorData = await response.json();
+        throw new Error(`Failed to add book: ${JSON.stringify(errorData)}`);
       }
 
       showToast("Book added successfully!", "success");
     }
 
-    // Сбрасываем форму и перезагружаем книги
-    document.getElementById("book-form").reset();
-    editingBookId = null;
+    // Обновляем список книг и закрываем модальное окно
     await loadBooks();
-    hideModal();
+    closeBookModal();
   } catch (error) {
     console.error(error);
-    showToast("Error saving book", "error");
+    showToast(`Error ${editingBookId ? "updating" : "adding"} book: ${error.message}`, "error");
   }
 }
 
-/**
- * Функция editBook(bookId) - заполняет форму и показывает модал
- */
+// Функция для редактирования книги (заполнение формы и открытие модала)
 function editBook(bookId) {
   const book = teacherBooks.find(b => b.id === bookId);
   if (!book) {
@@ -305,10 +349,10 @@ function editBook(bookId) {
     return;
   }
 
-  document.getElementById("editing-book-id").value = bookId;
+  editingBookId = bookId;
   document.getElementById("modal-title").textContent = "Edit Book";
 
-  // Заполняем поля
+  // Заполняем поля формы
   document.getElementById("book-title").value = book.title || "";
   document.getElementById("book-download-link").value = book.download_link || "";
   document.getElementById("book-publication-year").value = book.publication_year || "";
@@ -323,7 +367,7 @@ function editBook(bookId) {
     document.getElementById("book-publication-city").value = "";
   }
 
-  // Авторы
+  // Заполняем список авторов
   const container = document.getElementById("authors-container");
   container.innerHTML = "";
   if (book.authors && book.authors.length > 0) {
@@ -332,13 +376,13 @@ function editBook(bookId) {
       div.classList.add("author-entry");
       div.innerHTML = `
         <div class="input-group">
-          <input type="text" class="author-last-name" placeholder="Last Name" value="${a.last_name || ""}">
+          <input type="text" class="author-last-name" placeholder="Last Name" value="${sanitizeAttribute(a.last_name)}">
         </div>
         <div class="input-group">
-          <input type="text" class="author-first-name" placeholder="First Name" value="${a.first_name || ""}">
+          <input type="text" class="author-first-name" placeholder="First Name" value="${sanitizeAttribute(a.first_name)}">
         </div>
         <div class="input-group">
-          <input type="text" class="author-middle-name" placeholder="Middle Name" value="${a.middle_name || ""}">
+          <input type="text" class="author-middle-name" placeholder="Middle Name" value="${sanitizeAttribute(a.middle_name)}">
         </div>
         <button type="button" class="remove-author-btn" onclick="removeAuthorField(this)">Remove</button>
       `;
@@ -352,15 +396,21 @@ function editBook(bookId) {
   showModal();
 }
 
-/* ---------------- Delete Book (silent) ---------------- */
+// Функция для удаления книги
 async function deleteBook(bookId, silent=false) {
+  if (!silent) {
+    if (!confirm("Are you sure you want to delete this book?")) {
+      return;
+    }
+  }
+
   const token = localStorage.getItem("token");
   if (!token) {
     showToast("Unauthorized", "error");
     return;
   }
   try {
-    const resp = await fetch(`http://127.0.0.1:8000/books/${bookId}`, {
+    const resp = await fetch(`http://127.0.0.1:8000/books/${bookId}/`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -377,7 +427,7 @@ async function deleteBook(bookId, silent=false) {
   }
 }
 
-/* ---------------- Authors logic (Add / Remove fields) ---------------- */
+// Логика для добавления и удаления полей авторов
 function addAuthorField() {
   const container = document.getElementById("authors-container");
   const div = document.createElement("div");
@@ -398,33 +448,45 @@ function addAuthorField() {
 }
 
 function removeAuthorField(btn) {
-  btn.parentElement.remove();
+  const parent = btn.parentElement;
+  if (parent && parent.classList.contains("author-entry")) {
+    parent.remove();
+  }
 }
 
+// Функция для получения списка авторов из формы
 function getAuthors() {
   const entries = document.querySelectorAll(".author-entry");
   return Array.from(entries).map(en => {
     return {
-      last_name: en.querySelector(".author-last-name").value,
-      first_name: en.querySelector(".author-first-name").value,
-      middle_name: en.querySelector(".author-middle-name").value,
+      last_name: en.querySelector(".author-last-name").value.trim() || null,
+      first_name: en.querySelector(".author-first-name").value.trim() || null,
+      middle_name: en.querySelector(".author-middle-name").value.trim() || null,
     };
-  });
+  }).filter(author => author.last_name || author.first_name || author.middle_name);
 }
 
-/* ---------------- Utility: Clear errors ---------------- */
+// Утилиты для очистки и отображения ошибок
 function clearAllErrors() {
   const errs = document.querySelectorAll(".error-message");
   errs.forEach(e => e.textContent = "");
 }
 
-/* ---------------- Modal show/hide ---------------- */
+function showError(elementId, message) {
+  const elem = document.getElementById(elementId);
+  if (elem) {
+    elem.textContent = message;
+  }
+}
+
+// Функции для показа и скрытия модального окна
 function showModal() {
   const modal = document.getElementById("book-modal");
   if (modal) {
     modal.classList.add("show");
   }
 }
+
 function hideModal() {
   const modal = document.getElementById("book-modal");
   if (modal) {
@@ -432,7 +494,7 @@ function hideModal() {
   }
 }
 
-/* ---------------- Toast logic ---------------- */
+// Логика для отображения Toast уведомлений
 function showToast(msg, type="success") {
   const container = document.getElementById("toast-container");
   if (!container) return;
@@ -440,12 +502,14 @@ function showToast(msg, type="success") {
   toast.classList.add("toast");
   if (type === "error") {
     toast.style.backgroundColor = "#b52f2b";
+  } else if (type === "success") {
+    toast.style.backgroundColor = "#28a745";
   }
   toast.textContent = msg;
-  
+
   container.appendChild(toast);
 
-  // Удаляем через 3с
+  // Удаляем уведомление через 3 секунды
   setTimeout(() => {
     if (toast.parentNode) {
       toast.parentNode.removeChild(toast);
@@ -453,7 +517,17 @@ function showToast(msg, type="success") {
   }, 3000);
 }
 
-/* ---------------- Logout ---------------- */
+// Функция для копирования текста в буфер обмена
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    showToast("Link copied to clipboard!", "success");
+  }).catch(err => {
+    console.error('Failed to copy: ', err);
+    showToast("Failed to copy link", "error");
+  });
+}
+
+// Функция выхода из системы
 function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("username");

@@ -231,34 +231,63 @@ function displayBooks(books) {
   bookList.innerHTML = "";
 
   books.forEach(book => {
-    const publisherName = book.publisher_rel ? book.publisher_rel.name : "N/A";
-    const publisherCity = book.publisher_rel ? book.publisher_rel.city : "N/A";
+    const publisherName = sanitizeHTML(book.publisher_rel ? book.publisher_rel.name : "N/A");
+    const publisherCity = sanitizeHTML(book.publisher_rel ? book.publisher_rel.city : "N/A");
 
     let authorsText = "N/A";
     if (book.authors && book.authors.length > 0) {
       authorsText = book.authors
-        .map(a => `${a.last_name} ${a.first_name}${a.middle_name ? " " + a.middle_name : ""}`)
+        .map(a => sanitizeHTML(`${a.last_name} ${a.first_name}${a.middle_name ? " " + a.middle_name : ""}`))
         .join(", ");
     }
 
+    const downloadLink = book.download_link ? sanitizeAttribute(book.download_link) : "N/A";
+
+    // Сокращаем ссылку для отображения (например, первые 30 символов)
+    const displayLink = downloadLink !== "N/A" && downloadLink.length > 30 
+      ? `${downloadLink.substring(0, 30)}...` 
+      : downloadLink;
+
     const li = document.createElement("li");
     li.innerHTML = `
-      <strong>Title:</strong> ${book.title || "N/A"} <br>
+      <strong>Title:</strong> ${sanitizeHTML(book.title) || "N/A"} <br>
       <strong>Authors:</strong> ${authorsText} <br>
       <strong>Publisher:</strong> ${publisherName} <br>
       <strong>City:</strong> ${publisherCity} <br>
       <strong>Year:</strong> ${book.publication_year ?? "N/A"} <br>
       <strong>Pages:</strong> ${book.page_count ?? "N/A"} <br>
-      <strong>Additional Info:</strong> ${book.additional_info || "N/A"} <br>
+      <strong>Additional Info:</strong> ${sanitizeHTML(book.additional_info) || "N/A"} <br>
       <strong>Download Link:</strong> ${
-        book.download_link 
-          ? `<a href="${book.download_link}" target="_blank">${book.download_link}</a>`
+        downloadLink !== "N/A"
+          ? `<div class="link-container">
+               <a href="${downloadLink}" target="_blank" title="${downloadLink}">${displayLink}</a>
+               <button class="copy-btn" onclick="copyToClipboard('${sanitizeJS(downloadLink)}')"><i class="fas fa-copy"></i></button>
+             </div>`
           : "N/A"
       } <br>
-      <strong>Teacher:</strong> ${book.owner_username || "N/A"} <br>
     `;
     bookList.appendChild(li);
   });
+}
+
+/* ------------------ Функции для санитизации данных ------------------ */
+function sanitizeHTML(str) {
+  if (!str) return "";
+  return str.replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+}
+
+function sanitizeAttribute(str) {
+  if (!str) return "";
+  return str.replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+function sanitizeJS(str) {
+  if (!str) return "";
+  return str.replace(/'/g, "\\'");
 }
 
 /* ------------------ Чипы выбранных фильтров ------------------ */
@@ -327,7 +356,7 @@ function toggleSubMenu(category) {
   if (!subMenu) return;
   // Если display:none -> показать, иначе скрыть
   const st = window.getComputedStyle(subMenu).display;
-  subMenu.style.display = (st === "none") ? "block" : "none";
+  subMenu.style.display = (st === "none" || st === "block") ? (st === "none" ? "block" : "none") : "block";
 }
 
 /* ------------------ Логаут ------------------ */
@@ -335,4 +364,27 @@ function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("role");
   window.location.href = "login.html";
+}
+
+/* ------------------ Функция для отображения Toast уведомлений ------------------ */
+function showToast(msg, type="success") {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+  const toast = document.createElement("div");
+  toast.classList.add("toast");
+  if (type === "error") {
+    toast.style.backgroundColor = "#b52f2b";
+  } else if (type === "success") {
+    toast.style.backgroundColor = "#28a745";
+  }
+  toast.textContent = msg;
+
+  container.appendChild(toast);
+
+  // Удаляем уведомление через 3 секунды
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.parentNode.removeChild(toast);
+    }
+  }, 3000);
 }
