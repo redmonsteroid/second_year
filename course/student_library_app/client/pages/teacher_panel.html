@@ -89,7 +89,8 @@
 
         <div class="input-group">
           <label>Page Count</label>
-          <input type="number" id="book-page-count" placeholder="e.g. 250" />
+          <input type="number" id="book-page-count" placeholder="e.g. 250" min="1" />
+          <span class="error-message" id="book-page-count-error"></span>
         </div>
 
         <div class="input-group">
@@ -101,9 +102,15 @@
         <label>Authors</label>
         <div id="authors-container" class="authors-container">
           <div class="author-entry">
-            <input type="text" class="author-last-name" placeholder="Last Name" required>
-            <input type="text" class="author-first-name" placeholder="First Name" required>
-            <input type="text" class="author-middle-name" placeholder="Middle Name">
+            <div class="input-group">
+              <input type="text" class="author-last-name" placeholder="Last Name" required>
+            </div>
+            <div class="input-group">
+              <input type="text" class="author-first-name" placeholder="First Name" required>
+            </div>
+            <div class="input-group">
+              <input type="text" class="author-middle-name" placeholder="Middle Name">
+            </div>
             <button type="button" class="remove-author-btn" onclick="removeAuthorField(this)">Remove</button>
           </div>
         </div>

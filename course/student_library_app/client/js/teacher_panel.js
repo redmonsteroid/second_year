@@ -30,10 +30,19 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-});
 
-// Функция переключения темы (светлая/тёмная) уже определена в main.js
-// Поэтому здесь её не нужно определять снова
+  // Обработчик переключения темы (предполагается, что функция toggleTheme определена в main.js)
+  const themeToggleBtn = document.getElementById("theme-toggle-menu");
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener("click", toggleTheme);
+  }
+
+  // Обработчик открытия/закрытия бокового меню (предполагается, что функции toggleSidebar определены в main.js)
+  const menuToggleBtn = document.getElementById("menu-toggle");
+  if (menuToggleBtn) {
+    menuToggleBtn.addEventListener("click", toggleSidebar);
+  }
+});
 
 // Функции валидации
 function validateRequired(value, fieldName) {
@@ -60,6 +69,20 @@ function validatePublicationYear(value) {
     return { year: null, error: "Publication year must be between 0 and 2025." };
   }
   return { year: parsed, error: "" };
+}
+
+function validatePageCount(value) {
+  if (!value.trim()) {
+    return { pageCount: null, error: "" }; // Необязательное поле
+  }
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed)) {
+    return { pageCount: null, error: "Page count must be a valid number." };
+  }
+  if (parsed < 1) {
+    return { pageCount: null, error: "Page count must be a positive number." };
+  }
+  return { pageCount: parsed, error: "" };
 }
 
 // Функция загрузки книг с сервера
@@ -239,17 +262,29 @@ async function handleBookFormSubmit(e) {
 
   // Валидация полей
   let hasError = false;
+
+  // Валидация заголовка книги
   const titleError = validateRequired(titleVal, "Book Title");
   if (titleError) {
     showError("book-title-error", titleError);
     hasError = true;
   }
 
+  // Валидация года публикации
   const { year, error: yearError } = validatePublicationYear(yearVal);
   if (yearError) {
     showError("book-publication-year-error", yearError);
     hasError = true;
   }
+
+  // Валидация количества страниц
+  const { pageCount, error: pageCountError } = validatePageCount(pageCountVal);
+  if (pageCountError) {
+    showError("book-page-count-error", pageCountError);
+    hasError = true;
+  }
+
+  
 
   // Валидация издателя (можно добавить дополнительные проверки)
   // Например, если издательство обязательно, раскомментируйте следующий код
@@ -280,7 +315,7 @@ async function handleBookFormSubmit(e) {
     download_link: downloadLinkVal.trim() || null,
     publisher: publisherObj, // Объект с полями name и city
     publication_year: year, // Уже валидирован
-    page_count: pageCountVal ? parseInt(pageCountVal, 10) : null,
+    page_count: pageCount, // Уже валидирован
     additional_info: additionalInfoVal.trim() || null,
     authors: authors
   };
@@ -376,10 +411,10 @@ function editBook(bookId) {
       div.classList.add("author-entry");
       div.innerHTML = `
         <div class="input-group">
-          <input type="text" class="author-last-name" placeholder="Last Name" value="${sanitizeAttribute(a.last_name)}">
+          <input type="text" class="author-last-name" placeholder="Last Name" value="${sanitizeAttribute(a.last_name)}" required>
         </div>
         <div class="input-group">
-          <input type="text" class="author-first-name" placeholder="First Name" value="${sanitizeAttribute(a.first_name)}">
+          <input type="text" class="author-first-name" placeholder="First Name" value="${sanitizeAttribute(a.first_name)}" required>
         </div>
         <div class="input-group">
           <input type="text" class="author-middle-name" placeholder="Middle Name" value="${sanitizeAttribute(a.middle_name)}">
@@ -434,10 +469,10 @@ function addAuthorField() {
   div.classList.add("author-entry");
   div.innerHTML = `
     <div class="input-group">
-      <input type="text" class="author-last-name" placeholder="Last Name">
+      <input type="text" class="author-last-name" placeholder="Last Name" required>
     </div>
     <div class="input-group">
-      <input type="text" class="author-first-name" placeholder="First Name">
+      <input type="text" class="author-first-name" placeholder="First Name" required>
     </div>
     <div class="input-group">
       <input type="text" class="author-middle-name" placeholder="Middle Name">
@@ -445,6 +480,9 @@ function addAuthorField() {
     <button type="button" class="remove-author-btn" onclick="removeAuthorField(this)">Remove</button>
   `;
   container.appendChild(div);
+  
+  // Автоматическая прокрутка до нового поля
+  div.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function removeAuthorField(btn) {
