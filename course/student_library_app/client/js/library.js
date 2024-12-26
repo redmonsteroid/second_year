@@ -53,6 +53,22 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   });
+
+  // Предотвращаем распространение кликов внутри панели фильтров
+  const panel = document.getElementById("filters-panel");
+  if (panel) {
+    panel.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+  }
+
+  // Предотвращаем распространение кликов внутри каждого подменю
+  const subMenus = document.querySelectorAll(".sub-menu");
+  subMenus.forEach(subMenu => {
+    subMenu.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+  });
 });
 
 /* ------------------ Загрузка книг с сервера ------------------ */
@@ -301,7 +317,10 @@ function renderSelectedFilters() {
       const chip = document.createElement("span");
       chip.className = "filter-chip";
       chip.textContent = `${field}: ${value}`;
-      chip.addEventListener("click", () => removeFilter(field, value));
+      chip.addEventListener("click", (e) => {
+        e.stopPropagation(); // Предотвращаем распространение события
+        removeFilter(field, value);
+      });
       container.appendChild(chip);
     });
   }
@@ -387,4 +406,14 @@ function showToast(msg, type="success") {
       toast.parentNode.removeChild(toast);
     }
   }, 3000);
+}
+
+/* ------------------ Функция для копирования текста в буфер обмена ------------------ */
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    showToast("Ссылка скопирована в буфер обмена!", "success");
+  }).catch(err => {
+    console.error('Не удалось скопировать: ', err);
+    showToast("Не удалось скопировать ссылку", "error");
+  });
 }

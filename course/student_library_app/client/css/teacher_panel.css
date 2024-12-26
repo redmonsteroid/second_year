@@ -286,6 +286,8 @@ body.dark-mode .book-card {
   width: 500px;
   max-width: 90%;
   position: relative;
+  max-height: 80vh; /* Ограничиваем высоту модального окна */
+  overflow-y: auto;  /* Добавляем скролл при переполнении */
 }
 
 body.dark-mode .modal-content {
@@ -329,11 +331,50 @@ body.dark-mode .modal-content {
   background-color: #1e3d6f;
 }
 
+/* Стили для контейнера авторов */
+.authors-container {
+  max-height: 200px; /* Максимальная высота контейнера авторов */
+  overflow-y: auto;  /* Добавляет вертикальный скролл при переполнении */
+  padding-right: 10px; /* Отступ справа для удобства просмотра */
+  border: 1px solid #ccc; /* Граница для визуального отделения */
+  border-radius: 5px;     /* Слегка закругленные углы */
+  margin-bottom: 1rem;    /* Отступ снизу */
+}
+
 .author-entry {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+}
+
+.remove-author-btn {
+  background-color: #e74c3c;
+  color: #fff;
+  border: none;
+  padding: 0.3rem 0.6rem;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.remove-author-btn:hover {
+  background-color: #c0392b;
+}
+
+/* Стили для кнопки добавления автора */
+.add-author-btn {
+  background-color: #2ecc71;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.add-author-btn:hover {
+  background-color: #27ae60;
 }
 
 /* Toast container and toast messages */
