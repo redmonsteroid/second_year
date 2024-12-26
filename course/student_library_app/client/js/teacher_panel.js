@@ -21,6 +21,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+
+function sanitizeOrNA(value) {
+  const trimmed = value.trim();
+  return trimmed === "" ? "N/A" : trimmed;
+}
+
 function validateRequired(value, fieldName) {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -196,57 +202,98 @@ async function handleBookFormSubmit(e) {
     return;
   }
 
-  // Получаем значения
+  // Собираем данные из формы
   const titleVal = document.getElementById("book-title").value;
+  const downloadVal = document.getElementById("book-download-link").value;
+  const cityVal = document.getElementById("book-publication-city").value;
+  const publisherVal = document.getElementById("book-publisher").value;
   const yearVal = document.getElementById("book-publication-year").value;
+  const pageCountVal = document.getElementById("book-page-count").value;
+  const additionalInfoVal = document.getElementById("book-additional-info").value;
 
-  // Валидация
+  // Проверка обязательных полей
   const titleError = validateRequired(titleVal, "Book Title");
-  if (titleError) {
-    showError("book-title-error", titleError);
-  }
-
   const { year, error: yearError } = validatePublicationYear(yearVal);
-  if (yearError) {
-    showError("book-publication-year-error", yearError);
-  }
 
-  if (titleError || yearError) {
-    console.log("Validation failed. Title error:", titleError, "Year error:", yearError);
-    return;
-  }
+  if (titleError) showError("book-title-error", titleError);
+  if (yearError) showError("book-publication-year-error", yearError);
 
-  // Сбор данных для добавления книги
+  // Если есть ошибки, прекращаем выполнение
+  if (titleError || yearError) return;
+
+  // Обработка авторов
+  const authors = getAuthors();
+  authors.forEach(author => {
+    author.last_name = sanitizeOrNA(author.last_name);
+    author.first_name = sanitizeOrNA(author.first_name);
+  });
+
+  // Парсим количество страниц
+  const finalPageCount = pageCountVal.trim() !== "" ? parseInt(pageCountVal.trim(), 10) : null;
+
+  // Формируем данные для отправки
   const newBookData = {
     title: titleVal.trim(),
-    publication_year: year, // Теперь year определен корректно
-    // Добавьте обработку других полей, если необходимо
+    download_link: sanitizeOrNA(downloadVal),
+    publication_year: year,
+    page_count: finalPageCount,
+    additional_info: sanitizeOrNA(additionalInfoVal),
+    authors: authors,
+    publisher: {
+      name: sanitizeOrNA(publisherVal),
+      city: sanitizeOrNA(cityVal),
+    },
   };
 
   try {
-    const response = await fetch("http://127.0.0.1:8000/books/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(newBookData),
-    });
+    // Если редактирование
+    if (editingBookId) {
+      // Удаляем старую книгу
+      await deleteBook(editingBookId, true);
 
-    if (!response.ok) {
-      throw new Error("Failed to add book");
+      // Добавляем новую книгу
+      const response = await fetch("http://127.0.0.1:8000/books/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(newBookData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save book");
+      }
+
+      showToast("Book updated successfully!", "success");
+    } else {
+      // Если добавление новой книги
+      const response = await fetch("http://127.0.0.1:8000/books/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(newBookData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save book");
+      }
+
+      showToast("Book added successfully!", "success");
     }
 
-    showToast("Book added successfully!", "success");
+    // Сбрасываем форму и перезагружаем книги
     document.getElementById("book-form").reset();
+    editingBookId = null;
     await loadBooks();
+    hideModal();
   } catch (error) {
     console.error(error);
-    showToast("Error adding book", "error");
+    showToast("Error saving book", "error");
   }
 }
-
-
 
 /**
  * Функция editBook(bookId) - заполняет форму и показывает модал
