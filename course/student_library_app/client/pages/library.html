@@ -18,7 +18,7 @@
     </nav>
   </header>
 
-  <!-- Боковое меню -->
+  <!-- Боковое меню (для темы / logout) -->
   <aside class="sidebar" id="sidebar">
     <ul>
       <li><a href="../index.html"><i class="fas fa-home"></i> Home</a></li>
@@ -27,51 +27,97 @@
     </ul>
   </aside>
 
+  <!-- Кнопка "Filters" -->
+  <button class="filters-toggle-btn" id="filters-toggle-btn"><i class="fas fa-filter"></i> Filters</button>
+
+  <!-- Боковое (или всплывающее) меню фильтров -->
+  <aside class="filters-panel" id="filters-panel">
+    <div class="filter-categories">
+      <h2>Filters</h2>
+      <button class="close-filters-btn" id="close-filters-btn">&times;</button>
+      <ul>
+        <li class="category-item" onclick="toggleSubMenu('authors')">
+          Authors
+          <div class="sub-menu" id="sub-authors">
+            <input
+              type="text"
+              class="submenu-search"
+              placeholder="Search authors..."
+              oninput="filterSubMenu('authors', this.value)"
+            />
+            <ul id="sub-authors-list"></ul>
+          </div>
+        </li>
+        <li class="category-item" onclick="toggleSubMenu('teacher')">
+          Teacher
+          <div class="sub-menu" id="sub-teacher">
+            <input
+              type="text"
+              class="submenu-search"
+              placeholder="Search teachers..."
+              oninput="filterSubMenu('teacher', this.value)"
+            />
+            <ul id="sub-teacher-list"></ul>
+          </div>
+        </li>
+        <li class="category-item" onclick="toggleSubMenu('publisher')">
+          Publisher
+          <div class="sub-menu" id="sub-publisher">
+            <input
+              type="text"
+              class="submenu-search"
+              placeholder="Search publishers..."
+              oninput="filterSubMenu('publisher', this.value)"
+            />
+            <ul id="sub-publisher-list"></ul>
+          </div>
+        </li>
+        <li class="category-item" onclick="toggleSubMenu('publication_city')">
+          City
+          <div class="sub-menu" id="sub-publication_city">
+            <input
+              type="text"
+              class="submenu-search"
+              placeholder="Search cities..."
+              oninput="filterSubMenu('publication_city', this.value)"
+            />
+            <ul id="sub-publication_city-list"></ul>
+          </div>
+        </li>
+        <li class="category-item" onclick="toggleSubMenu('publication_year')">
+          Year
+          <div class="sub-menu" id="sub-publication_year">
+            <input
+              type="text"
+              class="submenu-search"
+              placeholder="Search years..."
+              oninput="filterSubMenu('publication_year', this.value)"
+            />
+            <ul id="sub-publication_year-list"></ul>
+          </div>
+        </li>
+        <li class="category-item" onclick="toggleSubMenu('title')">
+          Title
+          <div class="sub-menu" id="sub-title">
+            <input
+              type="text"
+              class="submenu-search"
+              placeholder="Search titles..."
+              oninput="filterSubMenu('title', this.value)"
+            />
+            <ul id="sub-title-list"></ul>
+          </div>
+        </li>
+      </ul>
+
+      <!-- Выбранные фильтры и кнопка Clear -->
+      <div id="selected-filters" class="selected-filters"></div>
+      <button id="clear-filters-btn" class="clear-filters-btn">Clear All Filters</button>
+    </div>
+  </aside>
+
   <!-- Основной контент -->
   <main class="main-content">
-    <div class="filter-sort-container">
-      <div class="filter-group">
-        <label for="filter-type">Filter by:</label>
-        <select id="filter-type">
-          <option value="">(None)</option>
-          <option value="authors">Author</option>
-          <option value="teacher">Teacher</option>
-          <option value="publisher">Publisher</option>
-          <option value="publication_city">City</option>
-          <option value="publication_year">Year</option>
-          <option value="title">Title</option>
-        </select>
-      </div>
-
-      <!-- Дропдаун -->
-      <div class="custom-dropdown" id="custom-dropdown">
-        <button type="button" class="dropdown-toggle" id="dropdown-toggle-btn">Select values</button>
-        <div class="dropdown-content" id="dropdown-content">
-          <input
-            type="text"
-            id="dropdown-search"
-            placeholder="Type to search..."
-          />
-          <div id="dropdown-checkbox-list"></div>
-        </div>
-      </div>
-
-      <button id="apply-filter-btn" class="filter-btn">Apply Filter</button>
-
-      <div class="sort-group">
-        <label for="sort-type">Sort by:</label>
-        <select id="sort-type">
-          <option value="">(None)</option>
-          <option value="title">Title (A-Z)</option>
-          <option value="authors">Author (A-Z)</option>
-          <option value="publication_year">Year (Descending)</option>
-          <option value="teacher">Teacher (A-Z)</option>
-        </select>
-        <button id="sort-btn">Sort</button>
-      </div>
-    </div>
-
-    <!-- Список книг -->
     <section>
       <h2>Available Books</h2>
       <ul id="book-list"></ul>
@@ -80,7 +126,7 @@
 
   <!-- Подключаем main.js для меню и темы -->
   <script src="../js/main.js"></script>
-  <!-- Подключаем скрипт для библиотеки -->
+  <!-- Подключаем библиотечный скрипт (library.js) -->
   <script src="../js/library.js"></script>
 </body>
 </html>

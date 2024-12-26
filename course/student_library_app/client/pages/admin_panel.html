@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Panel</title>
+  <!-- Иконки и стили -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="../css/admin_panel.css">
+</head>
+<body>
+  <header>
+    <nav class="navbar">
+      <h1>Admin Panel</h1>
+      <div class="right-buttons">
+        <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i> Menu</button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Боковое меню -->
+  <aside class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="../pages/library.html"><i class="fas fa-book"></i> Library</a></li>
+      <li><button class="theme-toggle-menu" id="theme-toggle-menu"><i class="fas fa-adjust"></i> Toggle Theme</button></li>
+      <li><button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button></li>
+    </ul>
+  </aside>
+
+  <main class="main-content">
+    <section class="admin-books-section">
+      <h2>All Books</h2>
+      <ul id="book-list"></ul>
+    </section>
+  </main>
+
+  <!-- main.js отвечает за меню и тему -->
+  <script src="../js/main.js"></script>
+  <!-- admin_panel.js отвечает за логику отображения/удаления книг -->
+  <script src="../js/admin_panel.js"></script>
+</body>
+</html>

@@ -1,51 +1,61 @@
-let booksData = [];                // Исходный массив всех книг
-const uniqueValuesByField = {};    // Словарь множеств уникальных значений по каждому полю
+// Храним исходные книги
+let booksData = [];
+
+// activeFilters: несколько Set-ов, по категориям
+let activeFilters = {
+  authors: new Set(),
+  teacher: new Set(),
+  publisher: new Set(),
+  publication_city: new Set(),
+  publication_year: new Set(),
+  title: new Set()
+};
+
+// Списки уникальных значений
+let uniqueValuesByField = {
+  authors: [],
+  teacher: [],
+  publisher: [],
+  publication_city: [],
+  publication_year: [],
+  title: []
+};
 
 document.addEventListener("DOMContentLoaded", () => {
   loadBooks();
 
-  // Элементы
-  const filterTypeSelect = document.getElementById("filter-type");
-  const dropdownToggleBtn = document.getElementById("dropdown-toggle-btn");
-  const dropdownContent = document.getElementById("dropdown-content");
-  const dropdownSearch = document.getElementById("dropdown-search");
-  const applyFilterBtn = document.getElementById("apply-filter-btn");
-  const sortBtn = document.getElementById("sort-btn");
+  // Кнопка "Filters"
+  const filtersToggleBtn = document.getElementById("filters-toggle-btn");
+  if (filtersToggleBtn) {
+    filtersToggleBtn.addEventListener("click", toggleFiltersPanel);
+  }
 
-  // При смене "Filter by" — генерируем чекбоксы
-  filterTypeSelect.addEventListener("change", () => {
-    // Скрываем/сбрасываем меню при смене типа
-    dropdownContent.classList.remove("show");
-    onFilterTypeChange();
-  });
+  // Кнопка "Close" внутри панели
+  const closeFiltersBtn = document.getElementById("close-filters-btn");
+  if (closeFiltersBtn) {
+    closeFiltersBtn.addEventListener("click", closeFiltersPanel);
+  }
 
-  // Кнопка раскрытия/скрытия дропдауна
-  dropdownToggleBtn.addEventListener("click", () => {
-    dropdownContent.classList.toggle("show");
-  });
+  // Кнопка "Clear All Filters"
+  const clearBtn = document.getElementById("clear-filters-btn");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", clearAllFilters);
+  }
 
-  // Поиск по чекбоксам внутри дропдауна
-  dropdownSearch.addEventListener("input", () => {
-    filterCheckBoxList(dropdownSearch.value.trim());
-  });
-
-  // Применение фильтра
-  applyFilterBtn.addEventListener("click", applyFilter);
-
-  // Сортировка
-  sortBtn.addEventListener("click", applySort);
-
-  // Если пользователь кликает вне дропдауна, мы закрываем меню
-  document.addEventListener("click", (event) => {
-    if (!dropdownContent.contains(event.target) && !dropdownToggleBtn.contains(event.target)) {
-      dropdownContent.classList.remove("show");
+  // Закрыть панель при клике вне
+  document.addEventListener("click", (e) => {
+    const panel = document.getElementById("filters-panel");
+    const btn = document.getElementById("filters-toggle-btn");
+    if (!panel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+      // Если панель открыта и клик был вне неё и вне кнопки, закрываем
+      if (panel.classList.contains("show")) {
+        panel.classList.remove("show");
+      }
     }
   });
 });
 
-/**
- * Загрузка книг с сервера
- */
+/* ------------------ Загрузка книг с сервера ------------------ */
 async function loadBooks() {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -56,18 +66,16 @@ async function loadBooks() {
 
   try {
     const response = await fetch("http://127.0.0.1:8000/books/", {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}` }
     });
-
     if (!response.ok) {
       throw new Error("Failed to load books");
     }
 
     booksData = await response.json();
-    // Собираем уникальные значения для фильтров
     buildUniqueValues(booksData);
+    renderAllSubMenus();
 
-    // Отображаем все книги по умолчанию
     displayBooks(booksData);
   } catch (error) {
     console.error(error);
@@ -75,185 +83,161 @@ async function loadBooks() {
   }
 }
 
-/**
- * Собираем уникальные значения (authors, teacher, publisher, city, year, title)
- * Теперь publisher = publisher_rel.name, city = publisher_rel.city
- */
+/* ------------------ Сбор уникальных значений ------------------ */
 function buildUniqueValues(books) {
-  uniqueValuesByField.authors = new Set();
-  uniqueValuesByField.teacher = new Set();
-  uniqueValuesByField.publisher = new Set();         // name издательства
-  uniqueValuesByField.publication_city = new Set();  // city издательства
-  uniqueValuesByField.publication_year = new Set();
-  uniqueValuesByField.title = new Set();
+  for (let field in uniqueValuesByField) {
+    uniqueValuesByField[field] = [];
+  }
 
-  books.forEach((book) => {
-    // Authors
-    if (book.authors && Array.isArray(book.authors)) {
-      book.authors.forEach((a) => {
-        const fullName = `${a.last_name} ${a.first_name}${a.middle_name ? " " + a.middle_name : ""}`.trim();
-        uniqueValuesByField.authors.add(fullName);
+  const setAuthors = new Set();
+  const setTeacher = new Set();
+  const setPublisher = new Set();
+  const setCity = new Set();
+  const setYear = new Set();
+  const setTitle = new Set();
+
+  books.forEach(book => {
+    if (book.authors) {
+      book.authors.forEach(a => {
+        const fn = `${a.last_name} ${a.first_name}${a.middle_name ? " " + a.middle_name : ""}`.trim();
+        setAuthors.add(fn);
       });
     }
-    // Teacher
-    if (book.owner_username) {
-      uniqueValuesByField.teacher.add(book.owner_username);
-    }
-
-    // Publisher (берём из book.publisher_rel?.name)
-    if (book.publisher_rel && book.publisher_rel.name) {
-      uniqueValuesByField.publisher.add(book.publisher_rel.name);
-    }
-
-    // City (берём из book.publisher_rel?.city)
-    if (book.publisher_rel && book.publisher_rel.city) {
-      uniqueValuesByField.publication_city.add(book.publisher_rel.city);
-    }
-
-    // Year
-    if (book.publication_year) {
-      uniqueValuesByField.publication_year.add(String(book.publication_year));
-    }
-
-    // Title
-    if (book.title) {
-      uniqueValuesByField.title.add(book.title);
-    }
+    if (book.owner_username) setTeacher.add(book.owner_username);
+    if (book.publisher_rel && book.publisher_rel.name) setPublisher.add(book.publisher_rel.name);
+    if (book.publisher_rel && book.publisher_rel.city) setCity.add(book.publisher_rel.city);
+    if (book.publication_year) setYear.add(String(book.publication_year));
+    if (book.title) setTitle.add(book.title);
   });
 
-  // Превращаем множества в массивы (и сортируем)
+  uniqueValuesByField.authors = Array.from(setAuthors).sort();
+  uniqueValuesByField.teacher = Array.from(setTeacher).sort();
+  uniqueValuesByField.publisher = Array.from(setPublisher).sort();
+  uniqueValuesByField.publication_city = Array.from(setCity).sort();
+  uniqueValuesByField.publication_year = Array.from(setYear).sort();
+  uniqueValuesByField.title = Array.from(setTitle).sort();
+}
+
+/* ------------------ Генерация чекбоксов ------------------ */
+function renderAllSubMenus() {
   for (let field in uniqueValuesByField) {
-    uniqueValuesByField[field] = Array.from(uniqueValuesByField[field]).sort();
+    const arr = uniqueValuesByField[field];
+    const subMenuListId = "sub-" + field + "-list";
+    const subMenuListElem = document.getElementById(subMenuListId);
+    if (!subMenuListElem) continue;
+
+    subMenuListElem.innerHTML = "";
+    arr.forEach(val => {
+      const li = document.createElement("li");
+      const label = document.createElement("label");
+      label.classList.add("checkbox-label");
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = val;
+      cb.addEventListener("change", () => onFilterCheck(field, cb));
+
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(val));
+      li.appendChild(label);
+      subMenuListElem.appendChild(li);
+    });
   }
 }
 
-/**
- * Генерация чекбоксов при смене типа фильтра
- */
-function onFilterTypeChange() {
-  const filterType = document.getElementById("filter-type").value;
-  const dropdownCheckboxList = document.getElementById("dropdown-checkbox-list");
-  const dropdownSearch = document.getElementById("dropdown-search");
-
-  // Очищаем старый список
-  dropdownCheckboxList.innerHTML = "";
-  dropdownSearch.value = "";
-
-  if (!filterType) {
-    return;
+/* ------------------ Обработка чекбоксов ------------------ */
+function onFilterCheck(category, checkboxElem) {
+  const val = checkboxElem.value;
+  if (checkboxElem.checked) {
+    activeFilters[category].add(val);
+  } else {
+    activeFilters[category].delete(val);
   }
-
-  const uniqueValues = uniqueValuesByField[filterType] || [];
-
-  uniqueValues.forEach((val) => {
-    const label = document.createElement("label");
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.value = val;
-    label.appendChild(cb);
-    label.appendChild(document.createTextNode(val));
-    dropdownCheckboxList.appendChild(label);
-  });
+  applyFilters();
 }
 
-/**
- * Поиск по списку чекбоксов (чтобы отфильтровать варианты)
- */
-function filterCheckBoxList(searchStr) {
-  const dropdownCheckboxList = document.getElementById("dropdown-checkbox-list");
-  const labels = dropdownCheckboxList.querySelectorAll("label");
+/* ------------------ Фильтр подменю (поиском) ------------------ */
+function filterSubMenu(category, searchValue) {
+  searchValue = searchValue.trim().toLowerCase();
+  const subMenuListId = "sub-" + category + "-list";
+  const subMenuListElem = document.getElementById(subMenuListId);
+  if (!subMenuListElem) return;
 
-  labels.forEach((lbl) => {
-    const text = lbl.textContent.toLowerCase();
-    if (text.includes(searchStr.toLowerCase())) {
-      lbl.style.display = "";
+  const items = subMenuListElem.querySelectorAll("li");
+  items.forEach(li => {
+    const text = li.textContent.toLowerCase();
+    if (text.includes(searchValue)) {
+      li.style.display = "";
     } else {
-      lbl.style.display = "none";
+      li.style.display = "none";
     }
   });
 }
 
-/**
- * Применяем фильтр
- */
-function applyFilter() {
-  const filterType = document.getElementById("filter-type").value;
-  const dropdownCheckboxList = document.getElementById("dropdown-checkbox-list");
+/* ------------------ Применение фильтров ------------------ */
+function applyFilters() {
+  // Проверяем, есть ли что-то в activeFilters
+  const allEmpty = Object.values(activeFilters).every(s => s.size === 0);
+  let filtered = [];
 
-  if (!filterType) {
-    displayBooks(booksData);
-    return;
-  }
-
-  // Собираем отмеченные чекбоксы
-  const checkedValues = Array.from(
-    dropdownCheckboxList.querySelectorAll("input[type='checkbox']:checked")
-  ).map(cb => cb.value);
-
-  if (checkedValues.length === 0) {
-    // Если ни один не выбран, показываем все
-    displayBooks(booksData);
-    return;
-  }
-
-  // Фильтруем
-  let filtered = booksData.filter((book) => {
-    switch (filterType) {
-      case "authors": {
-        if (!book.authors || book.authors.length === 0) return false;
-        const authorsFullNames = book.authors.map((a) =>
+  if (allEmpty) {
+    filtered = [...booksData];
+  } else {
+    filtered = booksData.filter(book => {
+      // authors
+      if (activeFilters.authors.size > 0) {
+        if (!book.authors) return false;
+        const names = book.authors.map(a =>
           `${a.last_name} ${a.first_name}${a.middle_name ? " " + a.middle_name : ""}`.trim()
         );
-        return authorsFullNames.some((name) => checkedValues.includes(name));
+        const hasAny = names.some(name => activeFilters.authors.has(name));
+        if (!hasAny) return false;
       }
-      case "teacher":
-        return checkedValues.includes(book.owner_username);
-
-      case "publisher":
-        // book.publisher_rel?.name
-        if (!book.publisher_rel) return false;
-        return checkedValues.includes(book.publisher_rel.name);
-
-      case "publication_city":
-        // book.publisher_rel?.city
-        if (!book.publisher_rel) return false;
-        return checkedValues.includes(book.publisher_rel.city);
-
-      case "publication_year":
-        return checkedValues.includes(String(book.publication_year));
-
-      case "title":
-        return checkedValues.includes(book.title);
-
-      default:
-        return true;
-    }
-  });
+      // teacher
+      if (activeFilters.teacher.size > 0) {
+        if (!activeFilters.teacher.has(book.owner_username)) return false;
+      }
+      // publisher
+      if (activeFilters.publisher.size > 0) {
+        const pub = book.publisher_rel ? book.publisher_rel.name : "";
+        if (!activeFilters.publisher.has(pub)) return false;
+      }
+      // city
+      if (activeFilters.publication_city.size > 0) {
+        const c = book.publisher_rel ? book.publisher_rel.city : "";
+        if (!activeFilters.publication_city.has(c)) return false;
+      }
+      // year
+      if (activeFilters.publication_year.size > 0) {
+        const y = String(book.publication_year || "");
+        if (!activeFilters.publication_year.has(y)) return false;
+      }
+      // title
+      if (activeFilters.title.size > 0) {
+        if (!activeFilters.title.has(book.title)) return false;
+      }
+      return true;
+    });
+  }
 
   displayBooks(filtered);
+  renderSelectedFilters();
 }
 
-/**
- * Отображение (рендер) книг в списке
- */
+/* ------------------ Отображение книг ------------------ */
 function displayBooks(books) {
   const bookList = document.getElementById("book-list");
   if (!bookList) return;
   bookList.innerHTML = "";
 
-  books.forEach((book) => {
-    // Издательство (name) и город (city)
+  books.forEach(book => {
     const publisherName = book.publisher_rel ? book.publisher_rel.name : "N/A";
     const publisherCity = book.publisher_rel ? book.publisher_rel.city : "N/A";
 
-    // Авторы
     let authorsText = "N/A";
     if (book.authors && book.authors.length > 0) {
       authorsText = book.authors
-        .map(
-          (a) =>
-            `${a.last_name} ${a.first_name}${a.middle_name ? " " + a.middle_name : ""}`
-        )
+        .map(a => `${a.last_name} ${a.first_name}${a.middle_name ? " " + a.middle_name : ""}`)
         .join(", ");
     }
 
@@ -267,7 +251,7 @@ function displayBooks(books) {
       <strong>Pages:</strong> ${book.page_count ?? "N/A"} <br>
       <strong>Additional Info:</strong> ${book.additional_info || "N/A"} <br>
       <strong>Download Link:</strong> ${
-        book.download_link
+        book.download_link 
           ? `<a href="${book.download_link}" target="_blank">${book.download_link}</a>`
           : "N/A"
       } <br>
@@ -277,55 +261,76 @@ function displayBooks(books) {
   });
 }
 
-/**
- * Сортировка
- */
-function applySort() {
-  const sortType = document.getElementById("sort-type").value;
-  if (!sortType) {
-    displayBooks(booksData);
-    return;
+/* ------------------ Чипы выбранных фильтров ------------------ */
+function renderSelectedFilters() {
+  const container = document.getElementById("selected-filters");
+  if (!container) return;
+  container.innerHTML = "";
+
+  for (let field in activeFilters) {
+    activeFilters[field].forEach(value => {
+      const chip = document.createElement("span");
+      chip.className = "filter-chip";
+      chip.textContent = `${field}: ${value}`;
+      chip.addEventListener("click", () => removeFilter(field, value));
+      container.appendChild(chip);
+    });
   }
-
-  let sorted = [...booksData];
-
-  switch (sortType) {
-    case "title":
-      sorted.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
-      break;
-    case "authors":
-      // Сортируем по фамилии первого автора
-      sorted.sort((a, b) => {
-        const aAuthor = (a.authors && a.authors[0])
-          ? a.authors[0].last_name.toLowerCase()
-          : "";
-        const bAuthor = (b.authors && b.authors[0])
-          ? b.authors[0].last_name.toLowerCase()
-          : "";
-        return aAuthor.localeCompare(bAuthor);
-      });
-      break;
-    case "publication_year":
-      // По убыванию
-      sorted.sort((a, b) => (b.publication_year || 0) - (a.publication_year || 0));
-      break;
-    case "teacher":
-      sorted.sort((a, b) => {
-        const aTeacher = (a.owner_username || "").toLowerCase();
-        const bTeacher = (b.owner_username || "").toLowerCase();
-        return aTeacher.localeCompare(bTeacher);
-      });
-      break;
-    default:
-      break;
-  }
-
-  displayBooks(sorted);
 }
 
-/**
- * Выход (logout)
- */
+/* Удалить конкретный фильтр */
+function removeFilter(category, value) {
+  activeFilters[category].delete(value);
+
+  // Снимаем чекбокс
+  const subMenuListId = "sub-" + category + "-list";
+  const subMenuListElem = document.getElementById(subMenuListId);
+  if (subMenuListElem) {
+    const cbs = subMenuListElem.querySelectorAll("input[type='checkbox']");
+    cbs.forEach(cb => {
+      if (cb.value === value) {
+        cb.checked = false;
+      }
+    });
+  }
+  applyFilters();
+}
+
+/* Очистить все фильтры */
+function clearAllFilters() {
+  for (let field in activeFilters) {
+    activeFilters[field].clear();
+  }
+  const allCheckboxes = document.querySelectorAll(".sub-menu input[type='checkbox']");
+  allCheckboxes.forEach(cb => {
+    cb.checked = false;
+  });
+
+  displayBooks(booksData);
+  renderSelectedFilters();
+}
+
+/* ------------------ Открыть/закрыть панель фильтров ------------------ */
+function toggleFiltersPanel() {
+  const panel = document.getElementById("filters-panel");
+  panel.classList.toggle("show");
+}
+
+function closeFiltersPanel() {
+  const panel = document.getElementById("filters-panel");
+  panel.classList.remove("show");
+}
+
+/* ------------------ Подменю внутри категории ------------------ */
+function toggleSubMenu(category) {
+  const subMenu = document.getElementById("sub-" + category);
+  if (!subMenu) return;
+  // Если display:none -> показать, иначе скрыть
+  const st = window.getComputedStyle(subMenu).display;
+  subMenu.style.display = (st === "none") ? "block" : "none";
+}
+
+/* ------------------ Логаут ------------------ */
 function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("role");

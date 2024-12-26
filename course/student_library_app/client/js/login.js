@@ -20,11 +20,16 @@ document.getElementById("login-btn").addEventListener("click", async () => {
     localStorage.setItem("role", data.role);
     localStorage.setItem("username", username);
 
+    // login.js (фрагмент)
     if (data.role === "teacher") {
       window.location.href = "../pages/teacher_panel.html";
+    } else if (data.role === "admin") {
+      window.location.href = "../pages/admin_panel.html";
     } else {
+    // Роль student
       window.location.href = "../pages/library.html";
     }
+
   } catch (error) {
     console.error(error);
     document.getElementById("error-message").innerText = "Login failed. Please try again.";
